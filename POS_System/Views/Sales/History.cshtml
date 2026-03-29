@@ -38,7 +38,7 @@
             </article>
             <article class="stats-card">
                 <span>Visible total</span>
-                <strong>$@Model.VisibleTotalAmount.ToString("N0")</strong>
+                <strong>MMK @Model.VisibleTotalAmount.ToString("N0")</strong>
                 <small>Combined total amount for the sales shown on this page.</small>
             </article>
             <article class="stats-card">
@@ -135,7 +135,7 @@
                                 <strong>@sale.InvoiceNo</strong>
                             </td>
                             <td>@sale.SaleDate.ToString("dd MMM yyyy hh:mm tt")</td>
-                            <td>$@sale.TotalAmount.ToString("N0")</td>
+                            <td>MMK @sale.TotalAmount.ToString("N0")</td>
                             <td>@sale.UserName</td>
                             <td>
                                 <div class="sales-history-table-note">
@@ -173,7 +173,7 @@
                         </div>
                         <div class="sales-history-metric">
                             <span>Total amount</span>
-                            <strong>$@sale.TotalAmount.ToString("N0")</strong>
+                            <strong>MMK @sale.TotalAmount.ToString("N0")</strong>
                         </div>
                         <div class="sales-history-metric">
                             <span>Line items</span>

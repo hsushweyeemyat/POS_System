@@ -189,7 +189,11 @@ public class SalesRepository : ISalesRepository
                 SaleDate = sale.SaleDate,
                 TotalAmount = sale.TotalAmount,
                 UserId = sale.UserId,
-                UserName = sale.User == null ? "Unknown cashier" : sale.User.FullName,
+                UserName = sale.CashierName != null && sale.CashierName != string.Empty
+                    ? sale.CashierName
+                    : sale.User == null
+                        ? "Unknown cashier"
+                        : sale.User.FullName,
                 LineItemCount = sale.SaleItems.Count(),
                 TotalQuantity = sale.SaleItems.Sum(item => (int?)item.Qty) ?? 0
             })
@@ -212,6 +216,7 @@ public class SalesRepository : ISalesRepository
             {
                 Id = sale.Id,
                 InvoiceNo = sale.InvoiceNo,
+                CashierName = sale.CashierName,
                 SaleDate = sale.SaleDate,
                 TotalAmount = sale.TotalAmount,
                 UserId = sale.UserId,
@@ -220,8 +225,7 @@ public class SalesRepository : ISalesRepository
                     : new TblUser
                     {
                         Id = sale.User.Id,
-                        FullName = sale.User.FullName,
-                        Email = sale.User.Email
+                        FullName = sale.User.FullName
                     },
                 SaleItems = sale.SaleItems
                     .OrderBy(item => item.Id)
@@ -229,6 +233,7 @@ public class SalesRepository : ISalesRepository
                     {
                         Id = item.Id,
                         ProductId = item.ProductId,
+                        ProductName = item.ProductName,
                         Qty = item.Qty,
                         Price = item.Price,
                         Product = item.Product == null

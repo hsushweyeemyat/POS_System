@@ -72,6 +72,9 @@ public partial class ApplicationDbContext : DbContext
                 .HasColumnName("Invoice_No")
                 .HasMaxLength(50)
                 .IsUnicode(false);
+            entity.Property(e => e.CashierName)
+                .HasColumnName("Cashier_Name")
+                .HasMaxLength(200);
             entity.Property(e => e.SaleDate)
                 .HasColumnName("Sale_Date")
                 .HasColumnType("datetime");
@@ -97,6 +100,9 @@ public partial class ApplicationDbContext : DbContext
 
             entity.Property(e => e.SaleId).HasColumnName("Sale_id");
             entity.Property(e => e.ProductId).HasColumnName("Product_id");
+            entity.Property(e => e.ProductName)
+                .HasColumnName("Product_Name")
+                .HasMaxLength(100);
 
             entity.HasOne(e => e.Product)
                 .WithMany(e => e.SaleItems)

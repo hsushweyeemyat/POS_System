@@ -1,7 +1,7 @@
 @using System.Text.Json
 @model SalesIndexViewModel
 @{
-    ViewData["Title"] = "Counter";
+    ViewData["Title"] = "Dashboard";
     var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
     var initialStateJson = JsonSerializer.Serialize(Model, jsonOptions);
 }
@@ -9,42 +9,40 @@
 <div class="page-shell sales-page-shell">
     <div id="sales-feedback" class="message-banner status-banner d-none" role="alert"></div>
 
+    <section class="section-card sales-dashboard-hero">
+        <div class="sales-dashboard-copy">
+            <span class="sales-dashboard-kicker">Main Screen</span>
+            <h2 class="section-title">Sales Dashboard</h2>
+            <p class="section-description">Browse by category, tap products to add them, and complete checkout from one working surface.</p>
+        </div>
+
+        <div class="stats-row sales-summary-strip">
+            <article class="stats-card">
+                <span>Visible products</span>
+                <strong id="sales-visible-products">@Model.ProductCount.ToString("N0")</strong>
+                <small>Items shown for the current category and search.</small>
+            </article>
+            <article class="stats-card">
+                <span>Items in cart</span>
+                <strong id="sales-cart-quantity">@Model.Cart.TotalQuantity.ToString("N0")</strong>
+                <small>Updated instantly as cashiers build the sale.</small>
+            </article>
+            <article class="stats-card">
+                <span>Total payable</span>
+                <strong id="sales-cart-total">MMK @Model.Cart.TotalAmount.ToString("N0")</strong>
+                <small>Live total from the current cart contents.</small>
+            </article>
+        </div>
+    </section>
+
     <div class="pos-grid sales-grid">
         <div class="pos-column">
-            <section class="section-card sales-summary-card">
-                <div class="section-heading">
-                    <div class="section-heading-copy">
-                        <span class="sales-kicker">POS Counter</span>
-                        <h2 class="section-title">Fast checkout with live stock and cart sync.</h2>
-                        <p class="section-description">Search products, build the sale, and finish checkout without leaving the counter workspace.</p>
-                    </div>
-                    <span class="section-meta-pill">Live inventory</span>
-                </div>
-
-                <div class="stats-row sales-summary-strip">
-                    <article class="stats-card">
-                        <span>Visible products</span>
-                        <strong id="sales-visible-products">@Model.ProductCount.ToString("N0")</strong>
-                        <small>Sellable items matching the current search.</small>
-                    </article>
-                    <article class="stats-card">
-                        <span>Items in cart</span>
-                        <strong id="sales-cart-quantity">@Model.Cart.TotalQuantity.ToString("N0")</strong>
-                        <small>Merged into one cart for this session.</small>
-                    </article>
-                    <article class="stats-card">
-                        <span>Total payable</span>
-                        <strong id="sales-cart-total">$@Model.Cart.TotalAmount.ToString("N0")</strong>
-                        <small>Calculated from live line subtotals before checkout.</small>
-                    </article>
-                </div>
-            </section>
-
             <section class="section-card sales-catalog-card">
-                <div class="section-heading">
+                <div class="sales-catalog-head">
                     <div class="section-heading-copy">
-                        <h2 class="section-title">Menu</h2>
-                        <p class="section-description">Find active products by name and add them straight into the current cart.</p>
+                        <span id="sales-active-category-label" class="sales-kicker">All Items</span>
+                        <h2 class="section-title">Product Browser</h2>
+                        <p class="section-description">Tap a product card to add it directly into the cart.</p>
                     </div>
 
                     <label class="board-search sales-search-box" for="sales-search-input">
@@ -57,15 +55,17 @@
                 </div>
 
                 <div class="sales-catalog-meta">
-                    <div id="sales-results-count" class="users-result-pill">@Model.ProductCount.ToString("N0") results</div>
-                    <span class="sales-meta-copy">Products are filtered to active stock that can still be sold.</span>
+                    <div id="sales-results-count" class="users-result-pill"><span>@Model.ProductCount.ToString("N0")</span> results</div>
+                    <span class="sales-meta-copy">Live stock stays in sync, and category pills help cashiers browse faster.</span>
                 </div>
+
+                <div id="sales-category-strip" class="sales-category-strip" role="tablist" aria-label="Product categories"></div>
 
                 <div id="sales-products" class="sales-product-grid"></div>
 
                 <div id="sales-products-empty" class="empty-state sales-empty-state d-none">
                     <strong>No products found</strong>
-                    <p>Try another name, or restock and activate products to make them sellable.</p>
+                    <p>Try another keyword or switch back to All Items.</p>
                 </div>
             </section>
         </div>
@@ -73,8 +73,9 @@
         <aside class="section-card invoice-panel sales-cart-card">
             <div class="section-heading">
                 <div class="section-heading-copy">
-                    <h2 class="section-title">Current Cart</h2>
-                    <p class="section-description">Adjust quantities, confirm subtotals, and finish checkout when everything looks right.</p>
+                    <span class="sales-kicker">Current Cart</span>
+                    <h2 class="section-title">Checkout Panel</h2>
+                    <p class="section-description">Review items, adjust quantities, and complete the current sale.</p>
                 </div>
                 <span class="section-meta-pill">Session cart</span>
             </div>
@@ -85,7 +86,7 @@
 
             <div id="sales-cart-empty" class="empty-state sales-empty-state d-none">
                 <strong>Cart is empty</strong>
-                <p>Select a product from the list to begin the sale.</p>
+                <p>Select a product card to begin this sale.</p>
             </div>
 
             <div class="invoice-summary sales-cart-summary">
@@ -95,12 +96,12 @@
                 </div>
                 <div class="invoice-summary-row total">
                     <span>Total amount</span>
-                    <strong id="sales-summary-total">$@Model.Cart.TotalAmount.ToString("N0")</strong>
+                    <strong id="sales-summary-total">MMK @Model.Cart.TotalAmount.ToString("N0")</strong>
                 </div>
             </div>
 
             <button id="sales-checkout-button" type="button" class="btn btn-primary w-100 sales-checkout-button">
-                Proceed to checkout
+                Complete Sale
             </button>
         </aside>
     </div>
@@ -117,6 +118,8 @@
         (() => {
             const initialStateElement = document.getElementById('sales-initial-state');
             const feedbackElement = document.getElementById('sales-feedback');
+            const categoryStripElement = document.getElementById('sales-category-strip');
+            const activeCategoryLabelElement = document.getElementById('sales-active-category-label');
             const productsElement = document.getElementById('sales-products');
             const productsEmptyElement = document.getElementById('sales-products-empty');
             const cartItemsElement = document.getElementById('sales-cart-items');
@@ -140,11 +143,20 @@
             };
 
             let state = normalizeState(JSON.parse(initialStateElement.textContent ?? '{}'));
+            let activeCategory = 'all';
             let searchDebounceHandle = 0;
             let requestVersion = 0;
 
             const numberFormatter = new Intl.NumberFormat();
             const mediaToneClasses = ['media-tilapia', 'media-boba', 'media-rice', 'media-lemon', 'media-dimsum', 'media-latte'];
+            const preferredCategoryOrder = ['electronics', 'clothing', 'food & beverage', 'home & garden', 'sports'];
+            const stockIconMarkup = `
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 8.5H18" />
+                    <path d="M7 8.5V18.5H17V8.5" />
+                    <path d="M9 8.5V6.5C9 5.67 9.67 5 10.5 5H13.5C14.33 5 15 5.67 15 6.5V8.5" />
+                </svg>
+            `;
 
             function normalizeState(rawState) {
                 return {
@@ -166,7 +178,7 @@
             }
 
             function formatCurrency(value) {
-                return `$${formatNumber(value)}`;
+                return `MMK ${formatNumber(value)}`;
             }
 
             function escapeHtml(value) {
@@ -187,6 +199,65 @@
                 return token || 'IT';
             }
 
+            function normalizeCategoryKey(value) {
+                return String(value ?? '').trim().toLowerCase();
+            }
+
+            function buildCategories(products) {
+                const categoryMap = new Map();
+
+                products.forEach(product => {
+                    const label = String(product.categoryName ?? '').trim() || 'Uncategorized';
+                    const key = normalizeCategoryKey(label);
+
+                    if (!categoryMap.has(key)) {
+                        categoryMap.set(key, { key, label, count: 0 });
+                    }
+
+                    categoryMap.get(key).count += 1;
+                });
+
+                const categories = Array.from(categoryMap.values()).sort((left, right) => {
+                    const leftIndex = preferredCategoryOrder.indexOf(left.key);
+                    const rightIndex = preferredCategoryOrder.indexOf(right.key);
+
+                    if (leftIndex !== -1 || rightIndex !== -1) {
+                        return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex)
+                            - (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex);
+                    }
+
+                    return left.label.localeCompare(right.label);
+                });
+
+                return [{
+                    key: 'all',
+                    label: 'All Items',
+                    count: products.length
+                }, ...categories];
+            }
+
+            function getCategories() {
+                return buildCategories(state.products);
+            }
+
+            function ensureActiveCategory() {
+                const categories = getCategories();
+
+                if (!categories.some(category => category.key === activeCategory)) {
+                    activeCategory = 'all';
+                }
+
+                return categories;
+            }
+
+            function getVisibleProducts() {
+                if (activeCategory === 'all') {
+                    return state.products;
+                }
+
+                return state.products.filter(product => normalizeCategoryKey(product.categoryName) === activeCategory);
+            }
+
             function pickToneClass(seed) {
                 const text = String(seed ?? '');
                 let hash = 0;
@@ -200,10 +271,187 @@
             }
 
             function categoryClass(categoryName) {
-                const label = String(categoryName ?? '').toLowerCase();
+                const label = normalizeCategoryKey(categoryName);
                 return label.includes('drink') || label.includes('tea') || label.includes('coffee') || label.includes('beverage')
                     ? 'tag-beverage'
                     : 'tag-food';
+            }
+
+            function renderProductIcon(content) {
+                return `
+                    <svg viewBox="0 0 140 140" class="sales-product-icon" aria-hidden="true" focusable="false">
+                        ${content}
+                    </svg>
+                `;
+            }
+
+            function productToneClass(product) {
+                return pickToneClass(`${product?.categoryName ?? ''}-${product?.name ?? ''}`);
+            }
+
+            function productIllustration(product) {
+                const name = normalizeCategoryKey(product?.name);
+                const category = normalizeCategoryKey(product?.categoryName);
+
+                if (name.includes('headphone') || name.includes('headset')) {
+                    return renderProductIcon(`
+                        <path d="M44 79V69C44 48 60 32 80 32C100 32 116 48 116 69V79" fill="none" stroke="#94a3b8" stroke-width="8" />
+                        <rect x="35" y="76" width="18" height="34" rx="9" fill="#cbd5e1" />
+                        <rect x="107" y="76" width="18" height="34" rx="9" fill="#cbd5e1" />
+                        <path d="M53 92C53 82 61 74 71 74" fill="none" stroke="#e2e8f0" stroke-width="7" />
+                        <path d="M107 92C107 82 99 74 89 74" fill="none" stroke="#e2e8f0" stroke-width="7" />
+                    `);
+                }
+
+                if (name.includes('mug') || name.includes('coffee')) {
+                    return renderProductIcon(`
+                        <path d="M50 58H90C99 58 106 65 106 74V92C106 104 96 114 84 114H56C44 114 34 104 34 92V74C34 65 41 58 50 58Z" fill="#b9a7d8" />
+                        <path d="M106 72H111C118 72 124 78 124 85C124 92 118 98 111 98H104" fill="none" stroke="#8f7ab8" stroke-width="7" />
+                        <path d="M56 45C56 40 59 36 63 33" fill="none" stroke="#e8def9" stroke-width="6" />
+                        <path d="M73 45C73 40 76 36 80 33" fill="none" stroke="#e8def9" stroke-width="6" />
+                        <path d="M47 80H94" fill="none" stroke="#e7ddf7" stroke-width="7" />
+                    `);
+                }
+
+                if (name.includes('cable') || name.includes('usb') || name.includes('charger')) {
+                    return renderProductIcon(`
+                        <path d="M70 38V80" fill="none" stroke="#475569" stroke-width="8" />
+                        <rect x="58" y="80" width="24" height="30" rx="8" fill="#384152" />
+                        <rect x="59" y="56" width="22" height="23" rx="8" fill="#5b4682" />
+                        <path d="M62 34V48" fill="none" stroke="#d5a267" stroke-width="6" />
+                        <path d="M78 34V48" fill="none" stroke="#d5a267" stroke-width="6" />
+                        <path d="M59 68H81" fill="none" stroke="#8f79bb" stroke-width="6" />
+                    `);
+                }
+
+                if (name.includes('shirt') || name.includes('tee')) {
+                    return renderProductIcon(`
+                        <path d="M46 55L63 43H77L94 55L106 74L92 82V108H48V82L34 74Z" fill="#8fd26d" />
+                        <path d="M63 43C64 49 69 53 76 53C83 53 88 49 89 43" fill="#d9de67" />
+                        <path d="M61 59H79" fill="none" stroke="#7ac45d" stroke-width="7" />
+                    `);
+                }
+
+                if (name.includes('sneaker') || name.includes('shoe')) {
+                    return renderProductIcon(`
+                        <path d="M35 88C47 86 57 79 65 67L84 80C92 86 101 91 111 93L119 95C122 96 124 99 124 103C124 108 120 111 114 111H52C42 111 34 103 34 94C34 91 34 89 35 88Z" fill="#ccb5f1" />
+                        <path d="M62 72L75 82" fill="none" stroke="#8f79bb" stroke-width="6" />
+                        <path d="M71 67L83 76" fill="none" stroke="#8f79bb" stroke-width="6" />
+                        <path d="M51 99H115" fill="none" stroke="#f5edff" stroke-width="7" />
+                    `);
+                }
+
+                if (name.includes('speaker')) {
+                    return renderProductIcon(`
+                        <rect x="46" y="35" width="48" height="78" rx="16" fill="#a6b7ff" />
+                        <circle cx="70" cy="64" r="12" fill="#eff4ff" />
+                        <circle cx="70" cy="90" r="17" fill="#6d85df" />
+                        <circle cx="70" cy="90" r="6" fill="#eff4ff" />
+                    `);
+                }
+
+                if (name.includes('mouse')) {
+                    return renderProductIcon(`
+                        <rect x="50" y="30" width="40" height="82" rx="20" fill="#d7dde8" />
+                        <path d="M70 31V58" fill="none" stroke="#7c8799" stroke-width="7" />
+                        <circle cx="70" cy="78" r="4" fill="#7c8799" />
+                    `);
+                }
+
+                if (name.includes('notebook')) {
+                    return renderProductIcon(`
+                        <rect x="44" y="32" width="54" height="78" rx="12" fill="#9fc3ff" />
+                        <rect x="98" y="32" width="8" height="78" rx="4" fill="#5f86d7" />
+                        <path d="M58 55H82" fill="none" stroke="#eef4ff" stroke-width="7" />
+                        <path d="M58 73H82" fill="none" stroke="#eef4ff" stroke-width="7" />
+                        <path d="M58 91H74" fill="none" stroke="#eef4ff" stroke-width="7" />
+                    `);
+                }
+
+                if (name.includes('snack') || name.includes('bar')) {
+                    return renderProductIcon(`
+                        <path d="M42 74L58 56H104L88 84H42Z" fill="#8b5a39" />
+                        <path d="M36 68L52 50H68L52 68H36Z" fill="#f5c98c" />
+                        <path d="M88 84L104 56H118L102 84H88Z" fill="#f5c98c" />
+                    `);
+                }
+
+                if (name.includes('drink') || name.includes('bottle')) {
+                    return renderProductIcon(`
+                        <path d="M59 32H85V46" fill="none" stroke="#ef476f" stroke-width="6" />
+                        <path d="M84 46H96" fill="none" stroke="#ef476f" stroke-width="6" />
+                        <path d="M49 52H96L90 110H55Z" fill="#d5b2ec" />
+                        <path d="M53 55H92V77H51Z" fill="#f33672" opacity="0.92" />
+                        <path d="M58 81H88" fill="none" stroke="#fff5fb" stroke-width="7" />
+                    `);
+                }
+
+                if (category.includes('electronics')) {
+                    return renderProductIcon(`
+                        <rect x="34" y="40" width="72" height="46" rx="12" fill="#a8bdf8" />
+                        <path d="M60 102H98" fill="none" stroke="#6a84d9" stroke-width="7" />
+                        <path d="M70 86V102" fill="none" stroke="#6a84d9" stroke-width="7" />
+                    `);
+                }
+
+                if (category.includes('clothing')) {
+                    return renderProductIcon(`
+                        <path d="M48 56L64 43H78L94 56L104 74L91 82V108H51V82L38 74Z" fill="#97d27a" />
+                        <path d="M64 43C65 48 70 51 76 51C82 51 87 48 88 43" fill="#d9de67" />
+                    `);
+                }
+
+                if (category.includes('food') || category.includes('beverage')) {
+                    return renderProductIcon(`
+                        <path d="M52 54H92C100 54 106 60 106 68V96C106 106 98 114 88 114H56C46 114 38 106 38 96V68C38 60 44 54 52 54Z" fill="#c4afe1" />
+                        <path d="M106 68H112C118 68 123 73 123 80C123 87 118 92 112 92H105" fill="none" stroke="#8f79bb" stroke-width="7" />
+                    `);
+                }
+
+                if (category.includes('sports')) {
+                    return renderProductIcon(`
+                        <circle cx="74" cy="76" r="28" fill="#ffd08a" />
+                        <path d="M74 48C81 57 87 67 90 76C87 85 81 95 74 104" fill="none" stroke="#c9843e" stroke-width="7" />
+                        <path d="M46 76H102" fill="none" stroke="#c9843e" stroke-width="7" />
+                    `);
+                }
+
+                if (category.includes('home')) {
+                    return renderProductIcon(`
+                        <path d="M44 72L74 46L104 72V108H44Z" fill="#a7c6f5" />
+                        <path d="M60 108V82H88V108" fill="#eff5ff" />
+                        <path d="M38 74L74 42L110 74" fill="none" stroke="#6f93da" stroke-width="7" />
+                    `);
+                }
+
+                return renderProductIcon(`
+                    <path d="M74 34L106 52V88L74 106L42 88V52Z" fill="#cbd5e1" />
+                    <path d="M74 34V68L106 52" fill="none" stroke="#94a3b8" stroke-width="7" />
+                    <path d="M74 68L42 52" fill="none" stroke="#94a3b8" stroke-width="7" />
+                `);
+            }
+
+            function productGlyph(product) {
+                const name = normalizeCategoryKey(product?.name);
+                const category = normalizeCategoryKey(product?.categoryName);
+
+                if (name.includes('headphone') || name.includes('headset')) return '🎧';
+                if (name.includes('mug') || name.includes('coffee')) return '☕';
+                if (name.includes('cable') || name.includes('usb') || name.includes('charger')) return '🔌';
+                if (name.includes('shirt') || name.includes('tee')) return '👕';
+                if (name.includes('sneaker') || name.includes('shoe')) return '👟';
+                if (name.includes('speaker')) return '🔊';
+                if (name.includes('yoga')) return '🧘';
+                if (name.includes('bottle')) return '💧';
+                if (name.includes('notebook')) return '📓';
+                if (name.includes('mouse')) return '🖱️';
+                if (name.includes('snack') || name.includes('bar')) return '🍫';
+                if (name.includes('drink')) return '🥤';
+                if (category.includes('electronics')) return '💻';
+                if (category.includes('clothing')) return '🧥';
+                if (category.includes('sports')) return '🏃';
+                if (category.includes('home')) return '🏠';
+                return '📦';
             }
 
             function setFeedback(message, type) {
@@ -217,46 +465,60 @@
                 feedbackElement.textContent = message;
             }
 
+            function renderCategoryStrip() {
+                const categories = ensureActiveCategory();
+                const activeCategoryLabel = categories.find(category => category.key === activeCategory)?.label ?? 'All Items';
+                activeCategoryLabelElement.textContent = activeCategoryLabel;
+
+                categoryStripElement.innerHTML = categories.map(category => `
+                    <button
+                        type="button"
+                        class="sales-category-pill ${category.key === activeCategory ? 'active' : ''}"
+                        data-category-key="${escapeHtml(category.key)}"
+                        role="tab"
+                        aria-selected="${category.key === activeCategory ? 'true' : 'false'}">
+                        <span>${escapeHtml(category.label)}</span>
+                    </button>
+                `).join('');
+            }
+
             function renderProducts() {
-                if (state.products.length === 0) {
+                const visibleProducts = getVisibleProducts();
+
+                if (visibleProducts.length === 0) {
                     productsElement.innerHTML = '';
                     productsEmptyElement.classList.remove('d-none');
                     return;
                 }
 
                 productsEmptyElement.classList.add('d-none');
-                productsElement.innerHTML = state.products.map(product => {
-                    const toneClass = pickToneClass(`${product.name}-${product.categoryName}`);
-                    const token = buildToken(product.name);
+                productsElement.innerHTML = visibleProducts.map(product => {
                     const addDisabled = product.canAddMore ? '' : 'disabled';
-                    const categoryName = product.categoryName || 'Menu';
-                    const stockLabel = product.remainingStock > 0
-                        ? `${formatNumber(product.remainingStock)} available now`
-                        : 'Allocated in cart';
-                    const cartLabel = product.quantityInCart > 0
-                        ? `In cart ${formatNumber(product.quantityInCart)}`
-                        : stockLabel;
+                    const toneClass = productToneClass(product);
+                    const inCartBadge = product.quantityInCart > 0
+                        ? `<span class="sales-product-badge">In cart ${formatNumber(product.quantityInCart)}</span>`
+                        : '';
 
                     return `
-                        <article class="product-card sales-product-card">
-                            <div class="product-media ${toneClass}">
-                                <span>${token}</span>
+                        <button
+                            type="button"
+                            class="sales-product-card"
+                            data-add-product="${product.id}"
+                            aria-label="Add ${escapeHtml(product.name)}"
+                            ${addDisabled}>
+                            <div class="sales-product-media ${toneClass}">
+                                ${inCartBadge}
+                                <div class="sales-product-symbol" aria-hidden="true">${productIllustration(product)}</div>
                             </div>
-                            <div class="product-copy">
-                                <span class="sales-card-category ${categoryClass(categoryName)}">${escapeHtml(categoryName)}</span>
-                                <h4 class="product-name">${escapeHtml(product.name)}</h4>
-                                <p class="product-description">Stock on hand ${formatNumber(product.stockQty)}. ${stockLabel}.</p>
+                            <div class="sales-product-copy">
+                                <h3 class="sales-product-name">${escapeHtml(product.name)}</h3>
+                                <strong class="sales-product-price">${formatCurrency(product.price)}</strong>
+                                <span class="sales-stock-pill">
+                                    ${stockIconMarkup}
+                                    <span>${formatNumber(product.stockQty)} in stock</span>
+                                </span>
                             </div>
-                            <div class="product-foot sales-product-card-foot">
-                                <div>
-                                    <strong class="price-tag">${formatCurrency(product.price)}</strong>
-                                    <span class="sales-card-note">${cartLabel}</span>
-                                </div>
-                                <button type="button" class="circle-button primary sales-add-button" data-add-product="${product.id}" aria-label="Add ${escapeHtml(product.name)}" ${addDisabled}>
-                                    +
-                                </button>
-                            </div>
-                        </article>
+                        </button>
                     `;
                 }).join('');
             }
@@ -324,8 +586,9 @@
             }
 
             function renderMetrics() {
-                resultsCountElement.textContent = `${formatNumber(state.productCount)} results`;
-                visibleProductsMetric.textContent = formatNumber(state.productCount);
+                const visibleCount = getVisibleProducts().length;
+                resultsCountElement.innerHTML = `<span>${formatNumber(visibleCount)}</span> results`;
+                visibleProductsMetric.textContent = formatNumber(visibleCount);
                 cartQuantityMetric.textContent = formatNumber(state.cart.totalQuantity);
                 cartTotalMetric.textContent = formatCurrency(state.cart.totalAmount);
                 summaryQuantityElement.textContent = formatNumber(state.cart.totalQuantity);
@@ -334,6 +597,7 @@
 
             function renderState() {
                 searchInput.value = state.searchTerm;
+                renderCategoryStrip();
                 renderProducts();
                 renderCart();
                 renderMetrics();
@@ -410,6 +674,17 @@
                 event.preventDefault();
                 window.clearTimeout(searchDebounceHandle);
                 loadState(searchInput.value.trim());
+            });
+
+            categoryStripElement.addEventListener('click', event => {
+                const categoryButton = event.target.closest('[data-category-key]');
+
+                if (!categoryButton) {
+                    return;
+                }
+
+                activeCategory = categoryButton.getAttribute('data-category-key') ?? 'all';
+                renderState();
             });
 
             productsElement.addEventListener('click', async event => {
@@ -512,7 +787,7 @@
                 } catch (error) {
                     setFeedback('Unable to complete checkout right now.', 'error');
                 } finally {
-                    checkoutButton.textContent = 'Proceed to checkout';
+                    checkoutButton.textContent = 'Complete Sale';
                     checkoutButton.disabled = !state.cart.canCheckout;
                 }
             });

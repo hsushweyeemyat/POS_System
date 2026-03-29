@@ -12,7 +12,5 @@ public class SalesInvoiceViewModel
 
     public string CashierName { get; set; } = string.Empty;
 
-    public string CashierEmail { get; set; } = string.Empty;
-
     public List<SalesInvoiceItemViewModel> Items { get; set; } = new();
 }

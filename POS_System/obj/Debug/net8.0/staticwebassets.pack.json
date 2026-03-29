@@ -9,6 +9,18 @@
       "PackagePath": "staticwebassets\\Design.html"
     },
     {
+      "Id": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\css\\design-reference-live.css",
+      "PackagePath": "staticwebassets\\css\\design-reference-live.css"
+    },
+    {
+      "Id": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\css\\design-refresh.css",
+      "PackagePath": "staticwebassets\\css\\design-refresh.css"
+    },
+    {
+      "Id": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\css\\sales-dashboard.css",
+      "PackagePath": "staticwebassets\\css\\sales-dashboard.css"
+    },
+    {
       "Id": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\css\\site.css",
       "PackagePath": "staticwebassets\\css\\site.css"
     },

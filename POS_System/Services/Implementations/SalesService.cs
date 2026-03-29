@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Http;
 using POS_System.Data.Entities;
@@ -186,6 +187,7 @@ public class SalesService : ISalesService
         CancellationToken cancellationToken = default)
     {
         var cart = GetNormalizedCart(userId, out _);
+        var cashierName = GetCurrentCashierName(userId);
 
         if (cart.Items.Count == 0)
         {
@@ -240,18 +242,20 @@ public class SalesService : ISalesService
                 saleItems.Add(new TblSaleItem
                 {
                     ProductId = product.Id,
+                    ProductName = product.Name,
                     Qty = cartItem.Quantity,
                     Price = product.Price
                 });
             }
 
-            var saleTimestamp = DateTime.UtcNow;
+            var saleTimestamp = GetCurrentUtcTimestamp();
             var sale = new TblSale
             {
                 InvoiceNo = await GenerateUniqueInvoiceNoAsync(cancellationToken),
                 SaleDate = saleTimestamp,
                 TotalAmount = totalAmount,
                 UserId = userId,
+                CashierName = cashierName,
                 CreatedDate = saleTimestamp
             };
 
@@ -269,7 +273,7 @@ public class SalesService : ISalesService
             return new SalesCheckoutResponseViewModel
             {
                 Succeeded = true,
-                Message = "Checkout completed successfully.",
+                Message = $"Checkout completed successfully. Invoice {sale.InvoiceNo} is ready.",
                 SaleId = sale.Id,
                 InvoiceNo = sale.InvoiceNo
             };
@@ -301,16 +305,15 @@ public class SalesService : ISalesService
         {
             SaleId = sale.Id,
             InvoiceNo = sale.InvoiceNo,
-            SaleDate = sale.SaleDate,
+            SaleDate = ConvertStoredUtcToLocal(sale.SaleDate),
             TotalAmount = sale.TotalAmount,
-            CashierName = sale.User?.FullName ?? "Unknown cashier",
-            CashierEmail = sale.User?.Email ?? string.Empty,
+            CashierName = ResolveCashierName(sale),
             Items = sale.SaleItems
-                .Select(item => new SalesInvoiceItemViewModel
+                .Select((item, index) => new SalesInvoiceItemViewModel
                 {
                     ProductId = item.ProductId,
-                    ItemLabel = $"Item #{item.ProductId:N0}",
-                    ProductName = item.Product?.Name ?? $"Product #{item.ProductId}",
+                    ItemLabel = $"Line {index + 1:00}",
+                    ProductName = ResolveProductName(item),
                     Quantity = item.Qty,
                     Price = item.Price
                 })
@@ -325,11 +328,17 @@ public class SalesService : ISalesService
         CancellationToken cancellationToken = default)
     {
         var normalizedRequest = NormalizeHistoryRequest(request, isAdmin);
+        DateTime? startDateInclusiveUtc = normalizedRequest.StartDate.HasValue
+            ? ConvertLocalBoundaryToUtc(normalizedRequest.StartDate.Value.Date)
+            : null;
+        DateTime? endDateExclusiveUtc = normalizedRequest.EndDate.HasValue
+            ? ConvertLocalBoundaryToUtc(normalizedRequest.EndDate.Value.Date.AddDays(1))
+            : null;
         var historyPage = await _salesRepository.GetSaleHistoryAsync(
             isAdmin ? null : userId,
             normalizedRequest.SearchTerm,
-            normalizedRequest.StartDate?.Date,
-            normalizedRequest.EndDate?.Date.AddDays(1),
+            startDateInclusiveUtc,
+            endDateExclusiveUtc,
             normalizedRequest,
             cancellationToken);
 
@@ -338,7 +347,7 @@ public class SalesService : ISalesService
             {
                 SaleId = item.SaleId,
                 InvoiceNo = item.InvoiceNo,
-                SaleDate = item.SaleDate,
+                SaleDate = ConvertStoredUtcToLocal(item.SaleDate),
                 TotalAmount = item.TotalAmount,
                 UserName = item.UserName,
                 LineItemCount = item.LineItemCount,
@@ -350,7 +359,7 @@ public class SalesService : ISalesService
         {
             Query = normalizedRequest,
             IsAdminView = isAdmin,
-            ScopeLabel = isAdmin ? "All completed sales" : "Your completed sales",
+            ScopeLabel = BuildHistoryScopeLabel(normalizedRequest, isAdmin),
             FilterLabel = BuildHistoryFilterLabel(normalizedRequest, isAdmin),
             VisibleTotalAmount = saleItems.Sum(item => item.TotalAmount),
             SalesPage = new PagedResult<SalesHistoryListItemViewModel>(
@@ -595,7 +604,7 @@ public class SalesService : ISalesService
     {
         for (var attempt = 0; attempt < 10; attempt++)
         {
-            var invoiceNo = $"INV-{DateTime.UtcNow:yyyyMMddHHmmss}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
+            var invoiceNo = $"INV-{GetCurrentUtcTimestamp():yyyyMMddHHmmssfff}-{RandomNumberGenerator.GetInt32(100000, 999999)}";
 
             if (!await _salesRepository.InvoiceExistsAsync(invoiceNo, cancellationToken))
             {
@@ -611,6 +620,72 @@ public class SalesService : ISalesService
         return product.StockQty <= 0
             ? $"{product.Name} is out of stock."
             : $"Only {product.StockQty:N0} of {product.Name} available in stock.";
+    }
+
+    private string GetCurrentCashierName(int userId)
+    {
+        var cashierName = _httpContextAccessor.HttpContext?.User
+            ?.FindFirstValue("full_name")
+            ?.Trim();
+
+        return string.IsNullOrWhiteSpace(cashierName)
+            ? $"User #{userId:N0}"
+            : cashierName;
+    }
+
+    private static string ResolveCashierName(TblSale sale)
+    {
+        var cashierName = sale.CashierName?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(cashierName))
+        {
+            return cashierName;
+        }
+
+        return sale.User?.FullName?.Trim() switch
+        {
+            { Length: > 0 } fullName => fullName,
+            _ => "Unknown cashier"
+        };
+    }
+
+    private static string ResolveProductName(TblSaleItem saleItem)
+    {
+        var productName = saleItem.ProductName?.Trim();
+
+        if (!string.IsNullOrWhiteSpace(productName))
+        {
+            return productName;
+        }
+
+        return saleItem.Product?.Name?.Trim() switch
+        {
+            { Length: > 0 } currentProductName => currentProductName,
+            _ => $"Product #{saleItem.ProductId}"
+        };
+    }
+
+    private static DateTime GetCurrentUtcTimestamp()
+    {
+        return DateTime.UtcNow;
+    }
+
+    private static DateTime ConvertStoredUtcToLocal(DateTime value)
+    {
+        var utcValue = value.Kind == DateTimeKind.Utc
+            ? value
+            : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+        return TimeZoneInfo.ConvertTimeFromUtc(utcValue, TimeZoneInfo.Local);
+    }
+
+    private static DateTime ConvertLocalBoundaryToUtc(DateTime value)
+    {
+        var localValue = value.Kind == DateTimeKind.Unspecified
+            ? value
+            : DateTime.SpecifyKind(value, DateTimeKind.Unspecified);
+
+        return TimeZoneInfo.ConvertTimeToUtc(localValue, TimeZoneInfo.Local);
     }
 
     private static SalesHistoryListRequestViewModel NormalizeHistoryRequest(
@@ -671,5 +746,22 @@ public class SalesService : ISalesService
         }
 
         return $"{startDate:dd MMM yyyy} - {endDate:dd MMM yyyy}";
+    }
+
+    private static string BuildHistoryScopeLabel(
+        SalesHistoryListRequestViewModel request,
+        bool isAdmin)
+    {
+        if (isAdmin)
+        {
+            return "All completed sales";
+        }
+
+        return request.StartDate.HasValue &&
+               request.EndDate.HasValue &&
+               request.StartDate.Value.Date == request.EndDate.Value.Date &&
+               request.StartDate.Value.Date == DateTime.Today
+            ? "Today's completed sales"
+            : "Your completed sales";
     }
 }

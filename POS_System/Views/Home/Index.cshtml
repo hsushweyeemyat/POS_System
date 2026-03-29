@@ -22,20 +22,20 @@
 
     var products = new[]
     {
-        new { Name = "Grilled Tilapia", Tag = "Food", TagClass = "tag-food", Price = "$3.00", Note = "Charred citrus glaze with herb rice.", Tone = "tilapia", Code = "GT" },
-        new { Name = "Caramel Boba", Tag = "Beverage", TagClass = "tag-beverage", Price = "$1.50", Note = "Brown sugar milk tea with pearl finish.", Tone = "boba", Code = "CB" },
-        new { Name = "Egg Fried Rice", Tag = "Food", TagClass = "tag-food", Price = "$2.50", Note = "Wok fried rice with scallion and chili crunch.", Tone = "rice", Code = "ER" },
-        new { Name = "Lemon Tea", Tag = "Beverage", TagClass = "tag-beverage", Price = "$1.00", Note = "House black tea with fresh lemon syrup.", Tone = "lemon", Code = "LT" },
-        new { Name = "Dimsum", Tag = "Food", TagClass = "tag-food", Price = "$3.50", Note = "Steamed dumplings with sesame soy dip.", Tone = "dimsum", Code = "DM" },
-        new { Name = "Coffee Latte", Tag = "Beverage", TagClass = "tag-beverage", Price = "$1.50", Note = "Velvety espresso milk pour for rush orders.", Tone = "latte", Code = "CL" }
+        new { Name = "Grilled Tilapia", Tag = "Food", TagClass = "tag-food", Price = "MMK 3.00", Note = "Charred citrus glaze with herb rice.", Tone = "tilapia", Code = "GT" },
+        new { Name = "Caramel Boba", Tag = "Beverage", TagClass = "tag-beverage", Price = "MMK 1.50", Note = "Brown sugar milk tea with pearl finish.", Tone = "boba", Code = "CB" },
+        new { Name = "Egg Fried Rice", Tag = "Food", TagClass = "tag-food", Price = "MMK 2.50", Note = "Wok fried rice with scallion and chili crunch.", Tone = "rice", Code = "ER" },
+        new { Name = "Lemon Tea", Tag = "Beverage", TagClass = "tag-beverage", Price = "MMK 1.00", Note = "House black tea with fresh lemon syrup.", Tone = "lemon", Code = "LT" },
+        new { Name = "Dimsum", Tag = "Food", TagClass = "tag-food", Price = "MMK 3.50", Note = "Steamed dumplings with sesame soy dip.", Tone = "dimsum", Code = "DM" },
+        new { Name = "Coffee Latte", Tag = "Beverage", TagClass = "tag-beverage", Price = "MMK 1.50", Note = "Velvety espresso milk pour for rush orders.", Tone = "latte", Code = "CL" }
     };
 
     var currentOrder = new[]
     {
-        new { Name = "Lemon tea", Price = "$1.00", Quantity = 1, Tone = "lemon", Code = "LT" },
-        new { Name = "Dimsum", Price = "$3.50", Quantity = 2, Tone = "dimsum", Code = "DM" },
-        new { Name = "Caramel Boba", Price = "$1.50", Quantity = 1, Tone = "boba", Code = "CB" },
-        new { Name = "Coffee Latte", Price = "$1.50", Quantity = 1, Tone = "latte", Code = "CL" }
+        new { Name = "Lemon tea", Price = "MMK 1.00", Quantity = 1, Tone = "lemon", Code = "LT" },
+        new { Name = "Dimsum", Price = "MMK 3.50", Quantity = 2, Tone = "dimsum", Code = "DM" },
+        new { Name = "Caramel Boba", Price = "MMK 1.50", Quantity = 1, Tone = "boba", Code = "CB" },
+        new { Name = "Coffee Latte", Price = "MMK 1.50", Quantity = 1, Tone = "latte", Code = "CL" }
     };
 }
 
@@ -174,37 +174,24 @@
             <div class="invoice-summary">
                 <div class="invoice-summary-row">
                     <span>Sub Total</span>
-                    <strong>$7.50</strong>
+                    <strong>MMK 7.50</strong>
                 </div>
                 <div class="invoice-summary-row">
                     <span>Tax (11%)</span>
-                    <strong>$3.00</strong>
+                    <strong>MMK 3.00</strong>
                 </div>
                 <div class="invoice-summary-row total">
                     <span>Total</span>
-                    <strong>$10.50</strong>
+                    <strong>MMK 10.50</strong>
                 </div>
             </div>
 
-            <div>
-                <p class="section-meta mb-2">Payment Method</p>
-                <div class="payment-methods">
-                    <button type="button" class="payment-chip active">
-                        <span class="payment-badge">MC</span>
-                        <span>Card</span>
-                    </button>
-                    <button type="button" class="payment-chip">
-                        <span class="payment-badge">CA</span>
-                        <span>Cash</span>
-                    </button>
-                    <button type="button" class="payment-chip">
-                        <span class="payment-badge">QR</span>
-                        <span>QRIS</span>
-                    </button>
-                </div>
+            <div class="message-banner">
+                <strong>Ready to finalize</strong>
+                <p>This counter view completes the order directly from the cart in one step.</p>
             </div>
 
-            <button type="button" class="btn btn-primary w-100">Place Order</button>
+            <button type="button" class="btn btn-primary w-100">Complete Order</button>
         </aside>
     </div>
 </div>

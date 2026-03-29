@@ -41,10 +41,6 @@
                     <div>
                         <span>Cashier</span>
                         <strong>@Model.CashierName</strong>
-                        @if (!string.IsNullOrWhiteSpace(Model.CashierEmail))
-                        {
-                            <small>@Model.CashierEmail</small>
-                        }
                     </div>
                 </div>
             </div>
@@ -62,11 +58,11 @@
                         <div class="invoice-item-values">
                             <div>
                                 <span>Unit price</span>
-                                <strong>$@item.Price.ToString("N0")</strong>
+                                <strong>MMK @item.Price.ToString("N0")</strong>
                             </div>
                             <div>
                                 <span>Subtotal</span>
-                                <strong>$@item.Subtotal.ToString("N0")</strong>
+                                <strong>MMK @item.Subtotal.ToString("N0")</strong>
                             </div>
                         </div>
                     </article>
@@ -94,7 +90,7 @@
                 </div>
                 <div class="invoice-summary-row total">
                     <span>Total amount</span>
-                    <strong>$@Model.TotalAmount.ToString("N0")</strong>
+                    <strong>MMK @Model.TotalAmount.ToString("N0")</strong>
                 </div>
             </div>
 

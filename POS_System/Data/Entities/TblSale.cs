@@ -12,6 +12,8 @@ public partial class TblSale
 
     public int UserId { get; set; }
 
+    public string CashierName { get; set; } = null!;
+
     public DateTime CreatedDate { get; set; }
 
     public int? ModifiedBy { get; set; }
