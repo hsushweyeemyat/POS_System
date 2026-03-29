@@ -1,0 +1,519 @@
+@model CategoriesIndexViewModel
+@{
+    ViewData["Title"] = "Categories";
+    var statusMessage = TempData["StatusMessage"]?.ToString();
+    var statusType = TempData["StatusType"]?.ToString() ?? "success";
+    var hasCategories = Model.CategoriesPage.Items.Count > 0;
+    var currentPageLabel = Model.CategoriesPage.TotalCount == 0 ? "0" : Model.CategoriesPage.Page.ToString();
+    var pageSummary = Model.CategoriesPage.TotalCount == 0
+        ? "Page 0 of 0"
+        : $"Page {Model.CategoriesPage.Page} of {Model.CategoriesPage.TotalPages}";
+}
+
+<div class="page-shell">
+    <section class="users-toolbar">
+        <div class="board-heading">
+            <h2>Categories</h2>
+            <p>Manage product categories with add, edit, and delete actions from one searchable table.</p>
+        </div>
+
+        <button type="button" class="btn btn-primary users-add-button" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+            <span>+</span>
+            <span>Add Category</span>
+        </button>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(statusMessage))
+    {
+        <div class="message-banner status-banner @(string.Equals(statusType, "error", StringComparison.OrdinalIgnoreCase) ? "is-error" : "is-success")" role="alert">
+            @statusMessage
+        </div>
+    }
+
+    <section class="users-table-controls">
+        <form asp-action="Index" method="get" class="users-search-form">
+            <label class="users-search" for="categories-table-search">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle cx="11" cy="11" r="6"></circle>
+                    <path d="M20 20L16.65 16.65"></path>
+                </svg>
+                <input id="categories-table-search" name="SearchTerm" type="search" value="@Model.Query.SearchTerm" placeholder="Search categories..." autocomplete="off" />
+            </label>
+            <input type="hidden" name="Page" value="1" />
+            <input type="hidden" name="PageSize" value="@Model.Query.PageSize" />
+        </form>
+
+        <div class="users-result-pill">
+            <span>@Model.CategoriesPage.TotalCount</span> results
+        </div>
+    </section>
+
+    <section class="users-table-card">
+        <div class="table-responsive @(hasCategories ? string.Empty : "d-none")">
+            <table class="table users-table align-middle mb-0" id="categories-data-table">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Name</th>
+                        <th class="users-action-column">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var categoryEntry in Model.CategoriesPage.Items.Select((category, index) => new { category, index }))
+                    {
+                        var category = categoryEntry.category;
+                        var rowNumber = Model.CategoriesPage.FirstItemNumber + categoryEntry.index;
+
+                        <tr>
+                            <td>@rowNumber</td>
+                            <td>@category.Name</td>
+                            <td>
+                                <div class="users-action-group">
+                                    <button type="button" class="table-action" data-category-edit data-category-id="@category.Id" data-category-name="@category.Name" aria-label="Edit @category.Name">
+                                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M4 20H8L18 10C18.53 9.47 18.53 8.53 18 8L16 6C15.47 5.47 14.53 5.47 14 6L4 16V20Z"></path>
+                                            <path d="M13 7L17 11"></path>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="table-action table-action-danger" data-category-delete data-category-id="@category.Id" data-category-name="@category.Name" aria-label="Delete @category.Name">
+                                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                            <path d="M5 7H19"></path>
+                                            <path d="M9 7V5.5C9 4.67 9.67 4 10.5 4H13.5C14.33 4 15 4.67 15 5.5V7"></path>
+                                            <path d="M8 10V17"></path>
+                                            <path d="M12 10V17"></path>
+                                            <path d="M16 10V17"></path>
+                                            <path d="M6 7L7 19C7.07 19.78 7.72 20.38 8.5 20.38H15.5C16.28 20.38 16.93 19.78 17 19L18 7"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div id="categories-empty-state" class="empty-state users-empty-state @(hasCategories ? "d-none" : string.Empty)">
+            <strong>No categories found</strong>
+            <p>Try another search keyword or add a new category.</p>
+        </div>
+    </section>
+
+    <section class="datatable-footer">
+        <div class="datatable-summary-group">
+            <span id="categories-page-summary">@pageSummary</span>
+
+            <form asp-action="Index" method="get" class="page-size-form">
+                <input type="hidden" name="Page" value="1" />
+                <input type="hidden" name="SearchTerm" value="@Model.Query.SearchTerm" />
+                <label class="page-size-label" for="categories-page-size">Rows</label>
+                <div class="page-size-select-wrap">
+                    <select id="categories-page-size" name="PageSize" class="form-select page-size-select">
+                        @foreach (var size in new[] { 5, 10, 25, 50 })
+                        {
+                            if (Model.Query.PageSize == size)
+                            {
+                                <option value="@size" selected>@size</option>
+                            }
+                            else
+                            {
+                                <option value="@size">@size</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <div class="pagination-controls">
+            @if (Model.CategoriesPage.HasPreviousPage)
+            {
+                <a class="page-button"
+                   asp-action="Index"
+                   asp-route-page="@(Model.CategoriesPage.Page - 1)"
+                   asp-route-pageSize="@Model.Query.PageSize"
+                   asp-route-searchTerm="@Model.Query.SearchTerm"
+                   aria-label="Previous page">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M14 6L8 12L14 18"></path>
+                    </svg>
+                </a>
+            }
+            else
+            {
+                <span class="page-button disabled" aria-disabled="true">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M14 6L8 12L14 18"></path>
+                    </svg>
+                </span>
+            }
+
+            <span class="page-button active">@currentPageLabel</span>
+
+            @if (Model.CategoriesPage.HasNextPage)
+            {
+                <a class="page-button"
+                   asp-action="Index"
+                   asp-route-page="@(Model.CategoriesPage.Page + 1)"
+                   asp-route-pageSize="@Model.Query.PageSize"
+                   asp-route-searchTerm="@Model.Query.SearchTerm"
+                   aria-label="Next page">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M10 6L16 12L10 18"></path>
+                    </svg>
+                </a>
+            }
+            else
+            {
+                <span class="page-button disabled" aria-disabled="true">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M10 6L16 12L10 18"></path>
+                    </svg>
+                </span>
+            }
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="createCategoryModal" tabindex="-1" aria-labelledby="createCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content user-modal">
+            <form asp-action="Create" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Page" value="@Model.Query.Page" />
+                <input type="hidden" name="PageSize" value="@Model.Query.PageSize" />
+                <input type="hidden" name="SearchTerm" value="@Model.Query.SearchTerm" />
+
+                <div class="modal-header user-modal-header">
+                    <div>
+                        <h3 class="modal-title" id="createCategoryModalLabel">Add Category</h3>
+                        <p class="user-modal-subtitle">Create a category to organize products in the catalog.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body user-modal-body">
+                    <div asp-validation-summary="ModelOnly" class="message-banner user-validation-summary text-danger"></div>
+                    <input asp-for="CreateCategory.IsActive" type="hidden" value="true" />
+
+                    <div class="form-grid">
+                        <div class="span-2">
+                            <label asp-for="CreateCategory.Name" class="form-label"></label>
+                            <input asp-for="CreateCategory.Name" class="form-control" />
+                            <span asp-validation-for="CreateCategory.Name" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer user-modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editCategoryModal" tabindex="-1" aria-labelledby="editCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content user-modal">
+            <form asp-action="Update" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Page" value="@Model.Query.Page" />
+                <input type="hidden" name="PageSize" value="@Model.Query.PageSize" />
+                <input type="hidden" name="SearchTerm" value="@Model.Query.SearchTerm" />
+                <input asp-for="EditCategory.Id" type="hidden" />
+
+                <div class="modal-header user-modal-header">
+                    <div>
+                        <h3 class="modal-title" id="editCategoryModalLabel">Edit Category</h3>
+                        <p class="user-modal-subtitle">Update the selected category name.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body user-modal-body">
+                    <div asp-validation-summary="ModelOnly" class="message-banner user-validation-summary text-danger"></div>
+                    <input asp-for="EditCategory.IsActive" type="hidden" value="true" />
+
+                    <div class="form-grid">
+                        <div class="span-2">
+                            <label asp-for="EditCategory.Name" class="form-label"></label>
+                            <input asp-for="EditCategory.Name" class="form-control" />
+                            <span asp-validation-for="EditCategory.Name" class="text-danger"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer user-modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1" aria-labelledby="deleteCategoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content user-modal">
+            <form asp-action="Delete" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Page" value="@Model.Query.Page" />
+                <input type="hidden" name="PageSize" value="@Model.Query.PageSize" />
+                <input type="hidden" name="SearchTerm" value="@Model.Query.SearchTerm" />
+                <input type="hidden" name="id" id="deleteCategoryId" />
+
+                <div class="modal-header user-modal-header">
+                    <div>
+                        <h3 class="modal-title" id="deleteCategoryModalLabel">Delete Category</h3>
+                        <p class="user-modal-subtitle">This action cannot be undone.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body user-modal-body">
+                    <p class="delete-confirmation-copy">
+                        Are you sure you want to delete <strong id="deleteCategoryName">this category</strong>?
+                    </p>
+                </div>
+
+                <div class="modal-footer user-modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">No</button>
+                    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const createModalElement = document.getElementById('createCategoryModal');
+            const editModalElement = document.getElementById('editCategoryModal');
+            const deleteModalElement = document.getElementById('deleteCategoryModal');
+            const createForm = createModalElement?.querySelector('form') ?? null;
+            const editForm = editModalElement?.querySelector('form') ?? null;
+            const deleteCategoryId = document.getElementById('deleteCategoryId');
+            const deleteCategoryName = document.getElementById('deleteCategoryName');
+            const editCategoryIdInput = document.getElementById('EditCategory_Id');
+            const editCategoryNameInput = document.getElementById('EditCategory_Name');
+            const activeModal = '@Model.ActiveModal';
+            const pageSizeSelect = document.getElementById('categories-page-size');
+            const searchForm = document.querySelector('.users-search-form');
+            const searchInput = document.getElementById('categories-table-search');
+            const modalElements = [createModalElement, editModalElement, deleteModalElement].filter(Boolean);
+            let keepCreateValidationOnFirstShow = activeModal === 'create';
+            let keepEditValidationOnFirstShow = activeModal === 'edit';
+            let suppressEditResetOnShow = false;
+            let searchDebounceId = 0;
+
+            modalElements.forEach(modalElement => {
+                if (modalElement.parentElement !== document.body) {
+                    document.body.appendChild(modalElement);
+                }
+            });
+
+            const clearValidationState = form => {
+                if (!form) {
+                    return;
+                }
+
+                if (window.jQuery) {
+                    const formValidator = window.jQuery(form).data('validator');
+                    formValidator?.resetForm();
+                }
+
+                form.querySelectorAll('.input-validation-error, .is-invalid').forEach(element => {
+                    element.classList.remove('input-validation-error', 'is-invalid');
+                    element.removeAttribute('aria-invalid');
+                });
+
+                form.querySelectorAll('.field-validation-error').forEach(element => {
+                    element.classList.remove('field-validation-error');
+                    element.classList.add('field-validation-valid');
+                    element.innerHTML = '';
+                });
+
+                form.querySelectorAll('.validation-summary-errors').forEach(element => {
+                    element.classList.remove('validation-summary-errors');
+                    element.classList.add('validation-summary-valid');
+                    const summaryList = element.querySelector('ul') ?? document.createElement('ul');
+                    summaryList.innerHTML = '';
+
+                    if (!element.contains(summaryList)) {
+                        element.appendChild(summaryList);
+                    }
+                });
+            };
+
+            const resetCreateFormFields = form => {
+                if (!form) {
+                    return;
+                }
+
+                const nameInput = form.querySelector('input[name="CreateCategory.Name"]');
+                const isActiveInput = form.querySelector('input[name="CreateCategory.IsActive"]');
+
+                if (nameInput) {
+                    nameInput.value = '';
+                }
+
+                if (isActiveInput) {
+                    isActiveInput.value = 'true';
+                }
+            };
+
+            const resetEditFormFields = form => {
+                if (!form) {
+                    return;
+                }
+
+                const idInput = form.querySelector('input[name="EditCategory.Id"]');
+                const nameInput = form.querySelector('input[name="EditCategory.Name"]');
+                const isActiveInput = form.querySelector('input[name="EditCategory.IsActive"]');
+
+                if (idInput) {
+                    idInput.value = '';
+                }
+
+                if (nameInput) {
+                    nameInput.value = '';
+                }
+
+                if (isActiveInput) {
+                    isActiveInput.value = 'true';
+                }
+            };
+
+            const resetModalState = (form, resetFields) => {
+                clearValidationState(form);
+                resetFields?.(form);
+            };
+
+            const populateEditForm = (categoryId, categoryName) => {
+                if (editCategoryIdInput) {
+                    editCategoryIdInput.value = categoryId ?? '';
+                }
+
+                if (editCategoryNameInput) {
+                    editCategoryNameInput.value = categoryName ?? '';
+                }
+            };
+
+            const registerDismissReset = (modalElement, form, resetFields) => {
+                if (!modalElement || !form) {
+                    return;
+                }
+
+                modalElement.addEventListener('hide.bs.modal', () => {
+                    resetModalState(form, resetFields);
+                });
+
+                modalElement.querySelectorAll('[data-bs-dismiss="modal"]').forEach(button => {
+                    button.addEventListener('click', () => {
+                        resetModalState(form, resetFields);
+                    });
+                });
+            };
+
+            registerDismissReset(createModalElement, createForm, resetCreateFormFields);
+            registerDismissReset(editModalElement, editForm, resetEditFormFields);
+
+            createModalElement?.addEventListener('hidden.bs.modal', () => {
+                resetModalState(createForm, resetCreateFormFields);
+            });
+
+            editModalElement?.addEventListener('hidden.bs.modal', () => {
+                resetModalState(editForm, resetEditFormFields);
+            });
+
+            createModalElement?.addEventListener('show.bs.modal', () => {
+                if (keepCreateValidationOnFirstShow) {
+                    keepCreateValidationOnFirstShow = false;
+                    return;
+                }
+
+                resetModalState(createForm, resetCreateFormFields);
+            });
+
+            editModalElement?.addEventListener('show.bs.modal', () => {
+                if (keepEditValidationOnFirstShow) {
+                    keepEditValidationOnFirstShow = false;
+                    return;
+                }
+
+                if (suppressEditResetOnShow) {
+                    suppressEditResetOnShow = false;
+                    return;
+                }
+
+                resetModalState(editForm, resetEditFormFields);
+            });
+
+            document.querySelectorAll('[data-category-edit]').forEach(button => {
+                button.addEventListener('click', () => {
+                    const categoryId = button.getAttribute('data-category-id');
+                    const categoryName = button.getAttribute('data-category-name');
+
+                    if (!categoryId || !editModalElement) {
+                        return;
+                    }
+
+                    resetModalState(editForm, resetEditFormFields);
+                    populateEditForm(categoryId, categoryName);
+                    suppressEditResetOnShow = true;
+                    bootstrap.Modal.getOrCreateInstance(editModalElement).show();
+                });
+            });
+
+            document.querySelectorAll('[data-category-delete]').forEach(button => {
+                button.addEventListener('click', () => {
+                    if (!deleteModalElement || !deleteCategoryId || !deleteCategoryName) {
+                        return;
+                    }
+
+                    deleteCategoryId.value = button.getAttribute('data-category-id') ?? '';
+                    deleteCategoryName.textContent = button.getAttribute('data-category-name') ?? 'this category';
+                    bootstrap.Modal.getOrCreateInstance(deleteModalElement).show();
+                });
+            });
+
+            if (activeModal === 'create' && createModalElement) {
+                bootstrap.Modal.getOrCreateInstance(createModalElement).show();
+            }
+
+            if (activeModal === 'edit' && editModalElement) {
+                bootstrap.Modal.getOrCreateInstance(editModalElement).show();
+            }
+
+            pageSizeSelect?.addEventListener('change', () => {
+                pageSizeSelect.form?.submit();
+            });
+
+            searchInput?.addEventListener('input', () => {
+                window.clearTimeout(searchDebounceId);
+                searchDebounceId = window.setTimeout(() => {
+                    searchForm?.requestSubmit();
+                }, 350);
+            });
+
+            searchInput?.addEventListener('keydown', event => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                window.clearTimeout(searchDebounceId);
+                searchForm?.requestSubmit();
+            });
+
+            searchInput?.addEventListener('search', () => {
+                window.clearTimeout(searchDebounceId);
+                searchForm?.requestSubmit();
+            });
+        })();
+    </script>
+}
