@@ -1,0 +1,523 @@
+@using System.Text.Json
+@model SalesIndexViewModel
+@{
+    ViewData["Title"] = "Counter";
+    var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+    var initialStateJson = JsonSerializer.Serialize(Model, jsonOptions);
+}
+
+<div class="page-shell sales-page-shell">
+    <div id="sales-feedback" class="message-banner status-banner d-none" role="alert"></div>
+
+    <div class="pos-grid sales-grid">
+        <div class="pos-column">
+            <section class="section-card sales-summary-card">
+                <div class="section-heading">
+                    <div class="section-heading-copy">
+                        <span class="sales-kicker">POS Counter</span>
+                        <h2 class="section-title">Fast checkout with live stock and cart sync.</h2>
+                        <p class="section-description">Search products, build the sale, and finish checkout without leaving the counter workspace.</p>
+                    </div>
+                    <span class="section-meta-pill">Live inventory</span>
+                </div>
+
+                <div class="stats-row sales-summary-strip">
+                    <article class="stats-card">
+                        <span>Visible products</span>
+                        <strong id="sales-visible-products">@Model.ProductCount.ToString("N0")</strong>
+                        <small>Sellable items matching the current search.</small>
+                    </article>
+                    <article class="stats-card">
+                        <span>Items in cart</span>
+                        <strong id="sales-cart-quantity">@Model.Cart.TotalQuantity.ToString("N0")</strong>
+                        <small>Merged into one cart for this session.</small>
+                    </article>
+                    <article class="stats-card">
+                        <span>Total payable</span>
+                        <strong id="sales-cart-total">$@Model.Cart.TotalAmount.ToString("N0")</strong>
+                        <small>Calculated from live line subtotals before checkout.</small>
+                    </article>
+                </div>
+            </section>
+
+            <section class="section-card sales-catalog-card">
+                <div class="section-heading">
+                    <div class="section-heading-copy">
+                        <h2 class="section-title">Menu</h2>
+                        <p class="section-description">Find active products by name and add them straight into the current cart.</p>
+                    </div>
+
+                    <label class="board-search sales-search-box" for="sales-search-input">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="11" cy="11" r="6"></circle>
+                            <path d="M20 20L16.65 16.65"></path>
+                        </svg>
+                        <input id="sales-search-input" type="search" value="@Model.SearchTerm" placeholder="Search active products by name..." autocomplete="off" />
+                    </label>
+                </div>
+
+                <div class="sales-catalog-meta">
+                    <div id="sales-results-count" class="users-result-pill">@Model.ProductCount.ToString("N0") results</div>
+                    <span class="sales-meta-copy">Products are filtered to active stock that can still be sold.</span>
+                </div>
+
+                <div id="sales-products" class="sales-product-grid"></div>
+
+                <div id="sales-products-empty" class="empty-state sales-empty-state d-none">
+                    <strong>No products found</strong>
+                    <p>Try another name, or restock and activate products to make them sellable.</p>
+                </div>
+            </section>
+        </div>
+
+        <aside class="section-card invoice-panel sales-cart-card">
+            <div class="section-heading">
+                <div class="section-heading-copy">
+                    <h2 class="section-title">Current Cart</h2>
+                    <p class="section-description">Adjust quantities, confirm subtotals, and finish checkout when everything looks right.</p>
+                </div>
+                <span class="section-meta-pill">Session cart</span>
+            </div>
+
+            <div id="sales-cart-note" class="message-banner sales-cart-note d-none"></div>
+
+            <div id="sales-cart-items" class="sales-cart-items"></div>
+
+            <div id="sales-cart-empty" class="empty-state sales-empty-state d-none">
+                <strong>Cart is empty</strong>
+                <p>Select a product from the list to begin the sale.</p>
+            </div>
+
+            <div class="invoice-summary sales-cart-summary">
+                <div class="invoice-summary-row">
+                    <span>Total quantity</span>
+                    <strong id="sales-summary-quantity">@Model.Cart.TotalQuantity.ToString("N0")</strong>
+                </div>
+                <div class="invoice-summary-row total">
+                    <span>Total amount</span>
+                    <strong id="sales-summary-total">$@Model.Cart.TotalAmount.ToString("N0")</strong>
+                </div>
+            </div>
+
+            <button id="sales-checkout-button" type="button" class="btn btn-primary w-100 sales-checkout-button">
+                Proceed to checkout
+            </button>
+        </aside>
+    </div>
+
+    <form id="sales-antiforgery" class="d-none">
+        @Html.AntiForgeryToken()
+    </form>
+</div>
+
+<script id="sales-initial-state" type="application/json">@Html.Raw(initialStateJson)</script>
+
+@section Scripts {
+    <script>
+        (() => {
+            const initialStateElement = document.getElementById('sales-initial-state');
+            const feedbackElement = document.getElementById('sales-feedback');
+            const productsElement = document.getElementById('sales-products');
+            const productsEmptyElement = document.getElementById('sales-products-empty');
+            const cartItemsElement = document.getElementById('sales-cart-items');
+            const cartEmptyElement = document.getElementById('sales-cart-empty');
+            const cartNoteElement = document.getElementById('sales-cart-note');
+            const searchInput = document.getElementById('sales-search-input');
+            const resultsCountElement = document.getElementById('sales-results-count');
+            const checkoutButton = document.getElementById('sales-checkout-button');
+            const visibleProductsMetric = document.getElementById('sales-visible-products');
+            const cartQuantityMetric = document.getElementById('sales-cart-quantity');
+            const cartTotalMetric = document.getElementById('sales-cart-total');
+            const summaryQuantityElement = document.getElementById('sales-summary-quantity');
+            const summaryTotalElement = document.getElementById('sales-summary-total');
+            const antiForgeryToken = document.querySelector('#sales-antiforgery input[name="__RequestVerificationToken"]')?.value ?? '';
+            const endpoints = {
+                state: '@Url.Action("State", "Sales")',
+                add: '@Url.Action("AddToCart", "Sales")',
+                update: '@Url.Action("UpdateQuantity", "Sales")',
+                remove: '@Url.Action("RemoveItem", "Sales")',
+                checkout: '@Url.Action("Checkout", "Sales")'
+            };
+
+            let state = normalizeState(JSON.parse(initialStateElement.textContent ?? '{}'));
+            let searchDebounceHandle = 0;
+            let requestVersion = 0;
+
+            const numberFormatter = new Intl.NumberFormat();
+            const mediaToneClasses = ['media-tilapia', 'media-boba', 'media-rice', 'media-lemon', 'media-dimsum', 'media-latte'];
+
+            function normalizeState(rawState) {
+                return {
+                    searchTerm: rawState?.searchTerm ?? '',
+                    productCount: rawState?.productCount ?? 0,
+                    products: Array.isArray(rawState?.products) ? rawState.products : [],
+                    cart: {
+                        items: Array.isArray(rawState?.cart?.items) ? rawState.cart.items : [],
+                        totalQuantity: rawState?.cart?.totalQuantity ?? 0,
+                        totalAmount: rawState?.cart?.totalAmount ?? 0,
+                        canCheckout: !!rawState?.cart?.canCheckout,
+                        validationMessage: rawState?.cart?.validationMessage ?? ''
+                    }
+                };
+            }
+
+            function formatNumber(value) {
+                return numberFormatter.format(value ?? 0);
+            }
+
+            function formatCurrency(value) {
+                return `$${formatNumber(value)}`;
+            }
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;');
+            }
+
+            function buildToken(value) {
+                const words = String(value ?? '')
+                    .split(/\s+/)
+                    .filter(Boolean)
+                    .slice(0, 2);
+                const token = words.map(word => word[0]?.toUpperCase() ?? '').join('');
+                return token || 'IT';
+            }
+
+            function pickToneClass(seed) {
+                const text = String(seed ?? '');
+                let hash = 0;
+
+                for (const character of text) {
+                    hash = ((hash << 5) - hash) + character.charCodeAt(0);
+                    hash |= 0;
+                }
+
+                return mediaToneClasses[Math.abs(hash) % mediaToneClasses.length];
+            }
+
+            function categoryClass(categoryName) {
+                const label = String(categoryName ?? '').toLowerCase();
+                return label.includes('drink') || label.includes('tea') || label.includes('coffee') || label.includes('beverage')
+                    ? 'tag-beverage'
+                    : 'tag-food';
+            }
+
+            function setFeedback(message, type) {
+                if (!message) {
+                    feedbackElement.className = 'message-banner status-banner d-none';
+                    feedbackElement.textContent = '';
+                    return;
+                }
+
+                feedbackElement.className = `message-banner status-banner ${type === 'error' ? 'is-error' : 'is-success'}`;
+                feedbackElement.textContent = message;
+            }
+
+            function renderProducts() {
+                if (state.products.length === 0) {
+                    productsElement.innerHTML = '';
+                    productsEmptyElement.classList.remove('d-none');
+                    return;
+                }
+
+                productsEmptyElement.classList.add('d-none');
+                productsElement.innerHTML = state.products.map(product => {
+                    const toneClass = pickToneClass(`${product.name}-${product.categoryName}`);
+                    const token = buildToken(product.name);
+                    const addDisabled = product.canAddMore ? '' : 'disabled';
+                    const categoryName = product.categoryName || 'Menu';
+                    const stockLabel = product.remainingStock > 0
+                        ? `${formatNumber(product.remainingStock)} available now`
+                        : 'Allocated in cart';
+                    const cartLabel = product.quantityInCart > 0
+                        ? `In cart ${formatNumber(product.quantityInCart)}`
+                        : stockLabel;
+
+                    return `
+                        <article class="product-card sales-product-card">
+                            <div class="product-media ${toneClass}">
+                                <span>${token}</span>
+                            </div>
+                            <div class="product-copy">
+                                <span class="sales-card-category ${categoryClass(categoryName)}">${escapeHtml(categoryName)}</span>
+                                <h4 class="product-name">${escapeHtml(product.name)}</h4>
+                                <p class="product-description">Stock on hand ${formatNumber(product.stockQty)}. ${stockLabel}.</p>
+                            </div>
+                            <div class="product-foot sales-product-card-foot">
+                                <div>
+                                    <strong class="price-tag">${formatCurrency(product.price)}</strong>
+                                    <span class="sales-card-note">${cartLabel}</span>
+                                </div>
+                                <button type="button" class="circle-button primary sales-add-button" data-add-product="${product.id}" aria-label="Add ${escapeHtml(product.name)}" ${addDisabled}>
+                                    +
+                                </button>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            }
+
+            function renderCart() {
+                const hasItems = state.cart.items.length > 0;
+
+                cartEmptyElement.classList.toggle('d-none', hasItems);
+                cartItemsElement.innerHTML = hasItems
+                    ? state.cart.items.map(item => {
+                        const toneClass = pickToneClass(`${item.productName}-${item.categoryName}`);
+                        const token = buildToken(item.productName);
+                        const minusDisabled = item.quantity <= 1 ? 'disabled' : '';
+                        const plusDisabled = item.canIncreaseQuantity ? '' : 'disabled';
+                        const unavailableClass = item.isAvailable ? '' : ' sales-cart-item-unavailable';
+                        const categoryMarkup = item.categoryName
+                            ? `<span class="sales-card-category ${categoryClass(item.categoryName)}">${escapeHtml(item.categoryName)}</span>`
+                            : '';
+                        const validationMarkup = item.validationMessage
+                            ? `<p class="sales-cart-validation">${escapeHtml(item.validationMessage)}</p>`
+                            : '';
+
+                        return `
+                            <article class="invoice-item sales-cart-item${unavailableClass}">
+                                <div class="invoice-thumb ${toneClass}">
+                                    <span>${token}</span>
+                                </div>
+                                <div class="invoice-item-main">
+                                    <div class="invoice-item-head">
+                                        <div class="sales-cart-copy">
+                                            ${categoryMarkup}
+                                            <strong>${escapeHtml(item.productName)}</strong>
+                                            <p class="sales-cart-line-copy">Unit price ${formatCurrency(item.unitPrice)}</p>
+                                        </div>
+                                        <button type="button" class="sales-remove-button" data-remove-product="${item.productId}" aria-label="Remove ${escapeHtml(item.productName)}">
+                                            Remove
+                                        </button>
+                                    </div>
+                                    <div class="sales-cart-item-footer">
+                                        <div class="quantity-pill sales-quantity-controls">
+                                            <button type="button" class="circle-button sales-quantity-button" data-cart-decrease="${item.productId}" ${minusDisabled}>-</button>
+                                            <span>${formatNumber(item.quantity)}</span>
+                                            <button type="button" class="circle-button primary sales-quantity-button" data-cart-increase="${item.productId}" ${plusDisabled}>+</button>
+                                        </div>
+                                        <div class="sales-cart-line-values">
+                                            <span>Subtotal</span>
+                                            <strong>${formatCurrency(item.subtotal)}</strong>
+                                        </div>
+                                    </div>
+                                    ${validationMarkup}
+                                </div>
+                            </article>
+                        `;
+                    }).join('')
+                    : '';
+
+                const showCartNote = !!state.cart.validationMessage && state.cart.items.length > 0;
+                cartNoteElement.classList.toggle('d-none', !showCartNote);
+                cartNoteElement.className = showCartNote
+                    ? `message-banner sales-cart-note ${state.cart.canCheckout ? 'status-banner is-success' : 'status-banner is-error'}`
+                    : 'message-banner sales-cart-note d-none';
+                cartNoteElement.textContent = showCartNote ? state.cart.validationMessage : '';
+
+                checkoutButton.disabled = !state.cart.canCheckout;
+            }
+
+            function renderMetrics() {
+                resultsCountElement.textContent = `${formatNumber(state.productCount)} results`;
+                visibleProductsMetric.textContent = formatNumber(state.productCount);
+                cartQuantityMetric.textContent = formatNumber(state.cart.totalQuantity);
+                cartTotalMetric.textContent = formatCurrency(state.cart.totalAmount);
+                summaryQuantityElement.textContent = formatNumber(state.cart.totalQuantity);
+                summaryTotalElement.textContent = formatCurrency(state.cart.totalAmount);
+            }
+
+            function renderState() {
+                searchInput.value = state.searchTerm;
+                renderProducts();
+                renderCart();
+                renderMetrics();
+            }
+
+            async function loadState(searchTerm) {
+                const currentRequest = ++requestVersion;
+
+                try {
+                    const response = await fetch(`${endpoints.state}?searchTerm=${encodeURIComponent(searchTerm ?? '')}`, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Unable to load products.');
+                    }
+
+                    const responseState = normalizeState(await response.json());
+
+                    if (currentRequest !== requestVersion) {
+                        return;
+                    }
+
+                    state = responseState;
+                    renderState();
+                } catch (error) {
+                    setFeedback('Unable to refresh product search right now.', 'error');
+                }
+            }
+
+            async function postAction(url, payload) {
+                requestVersion++;
+
+                const formData = new URLSearchParams({
+                    ...payload,
+                    __RequestVerificationToken: antiForgeryToken
+                });
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed.');
+                }
+
+                return await response.json();
+            }
+
+            searchInput.addEventListener('input', () => {
+                window.clearTimeout(searchDebounceHandle);
+                setFeedback('', 'success');
+                searchDebounceHandle = window.setTimeout(() => {
+                    loadState(searchInput.value.trim());
+                }, 250);
+            });
+
+            searchInput.addEventListener('search', () => {
+                window.clearTimeout(searchDebounceHandle);
+                loadState(searchInput.value.trim());
+            });
+
+            searchInput.addEventListener('keydown', event => {
+                if (event.key !== 'Enter') {
+                    return;
+                }
+
+                event.preventDefault();
+                window.clearTimeout(searchDebounceHandle);
+                loadState(searchInput.value.trim());
+            });
+
+            productsElement.addEventListener('click', async event => {
+                const addButton = event.target.closest('[data-add-product]');
+
+                if (!addButton) {
+                    return;
+                }
+
+                try {
+                    const result = await postAction(endpoints.add, {
+                        productId: addButton.getAttribute('data-add-product') ?? '',
+                        quantity: '1',
+                        searchTerm: state.searchTerm
+                    });
+
+                    state = normalizeState(result.state);
+                    renderState();
+                    setFeedback(result.message, result.succeeded ? 'success' : 'error');
+                } catch (error) {
+                    setFeedback('Unable to add that product right now.', 'error');
+                }
+            });
+
+            cartItemsElement.addEventListener('click', async event => {
+                const removeButton = event.target.closest('[data-remove-product]');
+                const increaseButton = event.target.closest('[data-cart-increase]');
+                const decreaseButton = event.target.closest('[data-cart-decrease]');
+
+                try {
+                    if (removeButton) {
+                        const result = await postAction(endpoints.remove, {
+                            productId: removeButton.getAttribute('data-remove-product') ?? '',
+                            searchTerm: state.searchTerm
+                        });
+
+                        state = normalizeState(result.state);
+                        renderState();
+                        setFeedback(result.message, result.succeeded ? 'success' : 'error');
+                        return;
+                    }
+
+                    if (increaseButton || decreaseButton) {
+                        const productId = increaseButton?.getAttribute('data-cart-increase')
+                            ?? decreaseButton?.getAttribute('data-cart-decrease')
+                            ?? '';
+                        const cartItem = state.cart.items.find(item => String(item.productId) === String(productId));
+
+                        if (!cartItem) {
+                            return;
+                        }
+
+                        const nextQuantity = increaseButton
+                            ? cartItem.quantity + 1
+                            : cartItem.quantity - 1;
+
+                        if (nextQuantity < 1) {
+                            return;
+                        }
+
+                        const result = await postAction(endpoints.update, {
+                            productId,
+                            quantity: String(nextQuantity),
+                            searchTerm: state.searchTerm
+                        });
+
+                        state = normalizeState(result.state);
+                        renderState();
+                        setFeedback(result.message, result.succeeded ? 'success' : 'error');
+                    }
+                } catch (error) {
+                    setFeedback('Unable to update the cart right now.', 'error');
+                }
+            });
+
+            checkoutButton.addEventListener('click', async () => {
+                if (!state.cart.canCheckout) {
+                    setFeedback(state.cart.validationMessage || 'Checkout is not available for this cart yet.', 'error');
+                    return;
+                }
+
+                checkoutButton.disabled = true;
+                checkoutButton.textContent = 'Processing...';
+
+                try {
+                    const result = await postAction(endpoints.checkout, {
+                        searchTerm: state.searchTerm
+                    });
+
+                    if (!result.succeeded) {
+                        state = normalizeState(result.state);
+                        renderState();
+                        setFeedback(result.message, 'error');
+                        return;
+                    }
+
+                    if (result.redirectUrl) {
+                        window.location.assign(result.redirectUrl);
+                    }
+                } catch (error) {
+                    setFeedback('Unable to complete checkout right now.', 'error');
+                } finally {
+                    checkoutButton.textContent = 'Proceed to checkout';
+                    checkoutButton.disabled = !state.cart.canCheckout;
+                }
+            });
+
+            renderState();
+        })();
+    </script>
+}

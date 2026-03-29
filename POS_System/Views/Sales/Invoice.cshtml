@@ -1,0 +1,101 @@
+@model SalesInvoiceViewModel
+@{
+    ViewData["Title"] = "Invoice";
+    var totalQuantity = 0;
+
+    foreach (var item in Model.Items)
+    {
+        totalQuantity += item.Quantity;
+    }
+}
+
+<div class="page-shell sales-page-shell">
+    <section class="section-card sales-summary-card invoice-hero-card">
+        <div class="section-heading">
+            <div class="section-heading-copy">
+                <span class="sales-kicker">Checkout Complete</span>
+                <h2 class="section-title">Invoice @Model.InvoiceNo</h2>
+                <p class="section-description">The sale was saved successfully, sale items were recorded, and stock quantities were deducted in the same transaction.</p>
+            </div>
+            <a asp-controller="Sales" asp-action="Index" class="btn btn-primary">Start new sale</a>
+        </div>
+    </section>
+
+    <div class="pos-grid sales-invoice-grid">
+        <section class="section-card invoice-sheet-card">
+            <div class="section-heading invoice-sheet-header">
+                <div class="section-heading-copy">
+                    <span class="sales-card-category tag-beverage">Invoice number</span>
+                    <h3 class="section-title">@Model.InvoiceNo</h3>
+                    <p class="section-description">Sale ID @Model.SaleId.ToString("N0")</p>
+                </div>
+
+                <div class="invoice-sheet-meta">
+                    <div>
+                        <span>Sale date</span>
+                        <strong>@Model.SaleDate.ToString("dd MMM yyyy hh:mm tt")</strong>
+                    </div>
+                    <div>
+                        <span>Cashier</span>
+                        <strong>@Model.CashierName</strong>
+                        @if (!string.IsNullOrWhiteSpace(Model.CashierEmail))
+                        {
+                            <small>@Model.CashierEmail</small>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="invoice-item-list">
+                @foreach (var item in Model.Items)
+                {
+                    <article class="invoice-item-card info-row">
+                        <div>
+                            <span class="sales-card-category">Product</span>
+                            <h4>@item.ProductName</h4>
+                            <p>Quantity @item.Quantity.ToString("N0")</p>
+                        </div>
+
+                        <div class="invoice-item-values">
+                            <div>
+                                <span>Unit price</span>
+                                <strong>$@item.Price.ToString("N0")</strong>
+                            </div>
+                            <div>
+                                <span>Subtotal</span>
+                                <strong>$@item.Subtotal.ToString("N0")</strong>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+
+        <aside class="section-card invoice-panel sales-cart-card">
+            <div class="section-heading">
+                <div class="section-heading-copy">
+                    <h2 class="section-title">Sale Summary</h2>
+                    <p class="section-description">Invoice totals are derived from the recorded sale items.</p>
+                </div>
+                <span class="section-meta-pill">Recorded sale</span>
+            </div>
+
+            <div class="invoice-summary sales-cart-summary">
+                <div class="invoice-summary-row">
+                    <span>Line items</span>
+                    <strong>@Model.Items.Count.ToString("N0")</strong>
+                </div>
+                <div class="invoice-summary-row">
+                    <span>Total quantity</span>
+                    <strong>@totalQuantity.ToString("N0")</strong>
+                </div>
+                <div class="invoice-summary-row total">
+                    <span>Total amount</span>
+                    <strong>$@Model.TotalAmount.ToString("N0")</strong>
+                </div>
+            </div>
+
+            <a asp-controller="Sales" asp-action="Index" class="btn btn-primary w-100 sales-checkout-button">Back to Counter</a>
+        </aside>
+    </div>
+</div>

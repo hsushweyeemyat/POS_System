@@ -1,0 +1,566 @@
+using System.Security.Cryptography;
+using Microsoft.AspNetCore.Http;
+using POS_System.Data.Entities;
+using POS_System.Extensions;
+using POS_System.Models.Sales;
+using POS_System.Repositories.Interfaces;
+using POS_System.Services.Interfaces;
+using POS_System.ViewModels.Sales;
+
+namespace POS_System.Services.Implementations;
+
+public class SalesService : ISalesService
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly ISalesRepository _salesRepository;
+
+    public SalesService(IHttpContextAccessor httpContextAccessor, ISalesRepository salesRepository)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _salesRepository = salesRepository;
+    }
+
+    public Task<SalesIndexViewModel> BuildIndexViewModelAsync(
+        int userId,
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        return BuildStateAsync(userId, searchTerm, cancellationToken);
+    }
+
+    public async Task<SalesMutationResponseViewModel> AddToCartAsync(
+        int userId,
+        int productId,
+        int quantity,
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (quantity < 1)
+        {
+            return await BuildFailureResponseAsync(
+                userId,
+                searchTerm,
+                "Quantity must be at least 1.",
+                cancellationToken);
+        }
+
+        var product = await _salesRepository.GetActiveProductByIdAsync(productId, cancellationToken);
+
+        if (product is null || product.StockQty < 1)
+        {
+            return await BuildFailureResponseAsync(
+                userId,
+                searchTerm,
+                "The selected product is not available for sale.",
+                cancellationToken);
+        }
+
+        var cart = GetNormalizedCart(userId, out _);
+        var existingItem = cart.Items.FirstOrDefault(item => item.ProductId == productId);
+        var newQuantity = quantity + (existingItem?.Quantity ?? 0);
+
+        if (newQuantity > product.StockQty)
+        {
+            return await BuildFailureResponseAsync(
+                userId,
+                searchTerm,
+                BuildStockMessage(product),
+                cancellationToken);
+        }
+
+        if (existingItem is null)
+        {
+            cart.Items.Add(new PosCartSessionItem
+            {
+                ProductId = product.Id,
+                Quantity = quantity,
+                ProductName = product.Name,
+                UnitPrice = product.Price
+            });
+        }
+        else
+        {
+            existingItem.Quantity = newQuantity;
+            existingItem.ProductName = product.Name;
+            existingItem.UnitPrice = product.Price;
+        }
+
+        SaveCart(userId, cart);
+
+        return new SalesMutationResponseViewModel
+        {
+            Succeeded = true,
+            Message = $"{product.Name} added to cart.",
+            State = await BuildStateAsync(userId, searchTerm, cancellationToken)
+        };
+    }
+
+    public async Task<SalesMutationResponseViewModel> UpdateCartItemAsync(
+        int userId,
+        int productId,
+        int quantity,
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (quantity < 1)
+        {
+            return await BuildFailureResponseAsync(
+                userId,
+                searchTerm,
+                "Quantity must be at least 1.",
+                cancellationToken);
+        }
+
+        var cart = GetNormalizedCart(userId, out _);
+        var existingItem = cart.Items.FirstOrDefault(item => item.ProductId == productId);
+
+        if (existingItem is null)
+        {
+            return await BuildFailureResponseAsync(
+                userId,
+                searchTerm,
+                "The selected cart item could not be found.",
+                cancellationToken);
+        }
+
+        var product = await _salesRepository.GetActiveProductByIdAsync(productId, cancellationToken);
+
+        if (product is null)
+        {
+            return await BuildFailureResponseAsync(
+                userId,
+                searchTerm,
+                "This product is no longer active and cannot be updated.",
+                cancellationToken);
+        }
+
+        if (quantity > product.StockQty)
+        {
+            return await BuildFailureResponseAsync(
+                userId,
+                searchTerm,
+                BuildStockMessage(product),
+                cancellationToken);
+        }
+
+        existingItem.Quantity = quantity;
+        existingItem.ProductName = product.Name;
+        existingItem.UnitPrice = product.Price;
+        SaveCart(userId, cart);
+
+        return new SalesMutationResponseViewModel
+        {
+            Succeeded = true,
+            Message = $"{product.Name} quantity updated.",
+            State = await BuildStateAsync(userId, searchTerm, cancellationToken)
+        };
+    }
+
+    public async Task<SalesMutationResponseViewModel> RemoveCartItemAsync(
+        int userId,
+        int productId,
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        var cart = GetNormalizedCart(userId, out _);
+        var removedItem = cart.Items.FirstOrDefault(item => item.ProductId == productId);
+
+        if (removedItem is not null)
+        {
+            cart.Items.Remove(removedItem);
+            SaveCart(userId, cart);
+        }
+
+        return new SalesMutationResponseViewModel
+        {
+            Succeeded = true,
+            Message = "Item removed from cart.",
+            State = await BuildStateAsync(userId, searchTerm, cancellationToken)
+        };
+    }
+
+    public async Task<SalesCheckoutResponseViewModel> CheckoutAsync(
+        int userId,
+        string? searchTerm = null,
+        CancellationToken cancellationToken = default)
+    {
+        var cart = GetNormalizedCart(userId, out _);
+
+        if (cart.Items.Count == 0)
+        {
+            return await BuildCheckoutFailureResponseAsync(
+                userId,
+                searchTerm,
+                "Add at least one product before checkout.",
+                cancellationToken);
+        }
+
+        var productIds = cart.Items
+            .Select(item => item.ProductId)
+            .Distinct()
+            .ToArray();
+
+        await using var transaction = await _salesRepository.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var trackedProducts = await _salesRepository.GetTrackedProductsByIdsAsync(productIds, cancellationToken);
+            var productsById = trackedProducts.ToDictionary(product => product.Id);
+            var saleItems = new List<TblSaleItem>();
+            var totalAmount = 0;
+
+            foreach (var cartItem in cart.Items)
+            {
+                if (!productsById.TryGetValue(cartItem.ProductId, out var product) || product.IsActive != 1)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+
+                    return await BuildCheckoutFailureResponseAsync(
+                        userId,
+                        searchTerm,
+                        "One or more cart items are no longer active.",
+                        cancellationToken);
+                }
+
+                if (product.StockQty < cartItem.Quantity)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+
+                    return await BuildCheckoutFailureResponseAsync(
+                        userId,
+                        searchTerm,
+                        BuildStockMessage(product),
+                        cancellationToken);
+                }
+
+                product.StockQty -= cartItem.Quantity;
+                totalAmount += product.Price * cartItem.Quantity;
+
+                saleItems.Add(new TblSaleItem
+                {
+                    ProductId = product.Id,
+                    Qty = cartItem.Quantity,
+                    Price = product.Price
+                });
+            }
+
+            var saleTimestamp = DateTime.UtcNow;
+            var sale = new TblSale
+            {
+                InvoiceNo = await GenerateUniqueInvoiceNoAsync(cancellationToken),
+                SaleDate = saleTimestamp,
+                TotalAmount = totalAmount,
+                UserId = userId,
+                CreatedDate = saleTimestamp
+            };
+
+            foreach (var saleItem in saleItems)
+            {
+                sale.SaleItems.Add(saleItem);
+            }
+
+            await _salesRepository.AddSaleAsync(sale, cancellationToken);
+            await _salesRepository.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+
+            ClearCart(userId);
+
+            return new SalesCheckoutResponseViewModel
+            {
+                Succeeded = true,
+                Message = "Checkout completed successfully.",
+                SaleId = sale.Id,
+                InvoiceNo = sale.InvoiceNo
+            };
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    public async Task<SalesInvoiceViewModel?> GetInvoiceAsync(
+        long saleId,
+        int userId,
+        CancellationToken cancellationToken = default)
+    {
+        var sale = await _salesRepository.GetSaleByIdAsync(saleId, userId, cancellationToken);
+
+        if (sale is null)
+        {
+            return null;
+        }
+
+        return new SalesInvoiceViewModel
+        {
+            SaleId = sale.Id,
+            InvoiceNo = sale.InvoiceNo,
+            SaleDate = sale.SaleDate,
+            TotalAmount = sale.TotalAmount,
+            CashierName = sale.User?.FullName ?? "Unknown cashier",
+            CashierEmail = sale.User?.Email ?? string.Empty,
+            Items = sale.SaleItems
+                .Select(item => new SalesInvoiceItemViewModel
+                {
+                    ProductId = item.ProductId,
+                    ProductName = item.Product?.Name ?? $"Product #{item.ProductId}",
+                    Quantity = item.Qty,
+                    Price = item.Price
+                })
+                .ToList()
+        };
+    }
+
+    private async Task<SalesIndexViewModel> BuildStateAsync(
+        int userId,
+        string? searchTerm,
+        CancellationToken cancellationToken)
+    {
+        var normalizedSearchTerm = searchTerm?.Trim() ?? string.Empty;
+        var cart = GetNormalizedCart(userId, out var cartChanged);
+        var cartProductIds = cart.Items
+            .Select(item => item.ProductId)
+            .Distinct()
+            .ToArray();
+
+        var activeCartProducts = await _salesRepository.GetActiveProductsByIdsAsync(cartProductIds, cancellationToken);
+        var cartProductsById = activeCartProducts.ToDictionary(product => product.Id);
+        var cartItems = new List<SalesCartItemViewModel>();
+        var snapshotChanged = cartChanged;
+
+        foreach (var cartItem in cart.Items)
+        {
+            cartProductsById.TryGetValue(cartItem.ProductId, out var currentProduct);
+
+            var productName = currentProduct?.Name ?? cartItem.ProductName;
+            var unitPrice = currentProduct?.Price ?? cartItem.UnitPrice;
+            var categoryName = currentProduct?.Category?.Name ?? string.Empty;
+            var availableStock = Math.Max(currentProduct?.StockQty ?? 0, 0);
+            var isActive = currentProduct is not null;
+            var isStockAvailable = isActive && availableStock >= cartItem.Quantity && availableStock > 0;
+            var validationMessage = isActive
+                ? isStockAvailable
+                    ? string.Empty
+                    : availableStock == 0
+                        ? "Out of stock."
+                        : $"Only {availableStock:N0} left in stock."
+                : "Product is no longer active.";
+
+            if (currentProduct is not null &&
+                (cartItem.ProductName != currentProduct.Name || cartItem.UnitPrice != currentProduct.Price))
+            {
+                cartItem.ProductName = currentProduct.Name;
+                cartItem.UnitPrice = currentProduct.Price;
+                snapshotChanged = true;
+            }
+
+            cartItems.Add(new SalesCartItemViewModel
+            {
+                ProductId = cartItem.ProductId,
+                ProductName = string.IsNullOrWhiteSpace(productName) ? $"Product #{cartItem.ProductId}" : productName,
+                CategoryName = categoryName,
+                UnitPrice = unitPrice,
+                Quantity = cartItem.Quantity,
+                AvailableStock = availableStock,
+                CanIncreaseQuantity = isActive && availableStock > cartItem.Quantity,
+                IsAvailable = isStockAvailable,
+                ValidationMessage = validationMessage
+            });
+        }
+
+        if (snapshotChanged)
+        {
+            SaveCart(userId, cart);
+        }
+
+        var quantityByProductId = cartItems.ToDictionary(item => item.ProductId, item => item.Quantity);
+        var sellableProducts = await _salesRepository.SearchSellableProductsAsync(normalizedSearchTerm, cancellationToken);
+        var productCards = sellableProducts
+            .Select(product =>
+            {
+                quantityByProductId.TryGetValue(product.Id, out var quantityInCart);
+                var remainingStock = Math.Max(product.StockQty - quantityInCart, 0);
+
+                return new SalesProductViewModel
+                {
+                    Id = product.Id,
+                    Name = product.Name,
+                    CategoryName = product.Category?.Name ?? string.Empty,
+                    Price = product.Price,
+                    StockQty = product.StockQty,
+                    QuantityInCart = quantityInCart,
+                    RemainingStock = remainingStock,
+                    CanAddMore = remainingStock > 0
+                };
+            })
+            .ToList();
+
+        var canCheckout = cartItems.Count > 0 && cartItems.All(item => item.IsAvailable);
+        var cartMessage = cartItems.Count == 0
+            ? "Cart is empty."
+            : canCheckout
+                ? string.Empty
+                : "Review unavailable cart items before checkout.";
+
+        return new SalesIndexViewModel
+        {
+            SearchTerm = normalizedSearchTerm,
+            ProductCount = productCards.Count,
+            Products = productCards,
+            Cart = new SalesCartViewModel
+            {
+                Items = cartItems,
+                TotalQuantity = cartItems.Sum(item => item.Quantity),
+                TotalAmount = cartItems.Sum(item => item.Subtotal),
+                CanCheckout = canCheckout,
+                ValidationMessage = cartMessage
+            }
+        };
+    }
+
+    private async Task<SalesMutationResponseViewModel> BuildFailureResponseAsync(
+        int userId,
+        string? searchTerm,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        return new SalesMutationResponseViewModel
+        {
+            Succeeded = false,
+            Message = message,
+            State = await BuildStateAsync(userId, searchTerm, cancellationToken)
+        };
+    }
+
+    private async Task<SalesCheckoutResponseViewModel> BuildCheckoutFailureResponseAsync(
+        int userId,
+        string? searchTerm,
+        string message,
+        CancellationToken cancellationToken)
+    {
+        return new SalesCheckoutResponseViewModel
+        {
+            Succeeded = false,
+            Message = message,
+            State = await BuildStateAsync(userId, searchTerm, cancellationToken)
+        };
+    }
+
+    private PosCartSession GetNormalizedCart(int userId, out bool wasChanged)
+    {
+        var session = GetSession();
+        var cart = session.GetJson<PosCartSession>(GetCartSessionKey(userId)) ?? new PosCartSession();
+        cart.Items ??= new List<PosCartSessionItem>();
+        var mergedItems = new Dictionary<int, PosCartSessionItem>();
+        var orderedProductIds = new List<int>();
+
+        wasChanged = false;
+
+        foreach (var item in cart.Items)
+        {
+            if (item.ProductId <= 0)
+            {
+                wasChanged = true;
+                continue;
+            }
+
+            var quantity = item.Quantity < 1 ? 1 : item.Quantity;
+            var unitPrice = item.UnitPrice < 0 ? 0 : item.UnitPrice;
+            var productName = item.ProductName?.Trim() ?? string.Empty;
+
+            if (item.Quantity != quantity || item.UnitPrice != unitPrice || item.ProductName != productName)
+            {
+                wasChanged = true;
+            }
+
+            if (!mergedItems.TryGetValue(item.ProductId, out var mergedItem))
+            {
+                mergedItem = new PosCartSessionItem
+                {
+                    ProductId = item.ProductId,
+                    Quantity = 0,
+                    ProductName = productName,
+                    UnitPrice = unitPrice
+                };
+
+                mergedItems[item.ProductId] = mergedItem;
+                orderedProductIds.Add(item.ProductId);
+            }
+            else
+            {
+                wasChanged = true;
+            }
+
+            mergedItem.Quantity += quantity;
+
+            if (!string.IsNullOrWhiteSpace(productName))
+            {
+                mergedItem.ProductName = productName;
+            }
+
+            mergedItem.UnitPrice = unitPrice;
+        }
+
+        var normalizedItems = orderedProductIds
+            .Select(productId => mergedItems[productId])
+            .ToList();
+
+        if (normalizedItems.Count != cart.Items.Count)
+        {
+            wasChanged = true;
+        }
+
+        cart.Items = normalizedItems;
+
+        if (wasChanged)
+        {
+            SaveCart(userId, cart);
+        }
+
+        return cart;
+    }
+
+    private ISession GetSession()
+    {
+        return _httpContextAccessor.HttpContext?.Session
+            ?? throw new InvalidOperationException("An active session is required for the POS cart.");
+    }
+
+    private void SaveCart(int userId, PosCartSession cart)
+    {
+        GetSession().SetJson(GetCartSessionKey(userId), cart);
+    }
+
+    private void ClearCart(int userId)
+    {
+        GetSession().Remove(GetCartSessionKey(userId));
+    }
+
+    private string GetCartSessionKey(int userId)
+    {
+        return $"pos-sales-cart:{userId}";
+    }
+
+    private async Task<string> GenerateUniqueInvoiceNoAsync(CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 10; attempt++)
+        {
+            var invoiceNo = $"INV-{DateTime.UtcNow:yyyyMMddHHmmss}-{RandomNumberGenerator.GetInt32(1000, 9999)}";
+
+            if (!await _salesRepository.InvoiceExistsAsync(invoiceNo, cancellationToken))
+            {
+                return invoiceNo;
+            }
+        }
+
+        return $"INV-{Guid.NewGuid():N}".ToUpperInvariant();
+    }
+
+    private static string BuildStockMessage(TblProduct product)
+    {
+        return product.StockQty <= 0
+            ? $"{product.Name} is out of stock."
+            : $"Only {product.StockQty:N0} of {product.Name} available in stock.";
+    }
+}
