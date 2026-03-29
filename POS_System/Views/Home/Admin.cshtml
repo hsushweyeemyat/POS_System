@@ -1,15 +1,130 @@
 @{
-    ViewData["Title"] = "Admin Area";
+    ViewData["Title"] = "Settings";
 }
 
-<div class="mb-4">
-    <h1 class="h3">Admin area</h1>
-    <p class="text-muted mb-0">This page is available only to users in the Admin role.</p>
-</div>
+<div class="page-shell">
+    <section class="board-tabs" aria-label="Settings areas">
+        <button type="button" class="board-tab active">
+            <span class="board-count">4</span>
+            <span>Staff</span>
+        </button>
+        <button type="button" class="board-tab">
+            <span class="board-count">8</span>
+            <span>Catalog</span>
+        </button>
+        <button type="button" class="board-tab">
+            <span class="board-count">3</span>
+            <span>Reports</span>
+        </button>
+        <button type="button" class="board-tab">
+            <span class="board-count">2</span>
+            <span>Security</span>
+        </button>
+    </section>
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <p class="mb-3">Use this area for user management, product maintenance, reports, and system configuration in the next implementation steps.</p>
-        <a asp-controller="Users" asp-action="Index" class="btn btn-primary">Manage users</a>
-    </div>
+    <section class="board-toolbar">
+        <div class="board-heading">
+            <h2>Operations settings</h2>
+            <p>Administrative controls are presented as modules so they match the same calm service-console rhythm as the counter screens.</p>
+        </div>
+        <a asp-controller="Users" asp-action="Index" class="btn btn-primary">Open staff board</a>
+    </section>
+
+    <section class="module-grid">
+        <article class="module-card">
+            <div class="module-card-top">
+                <div class="module-card-title">
+                    <div class="staff-avatar">UM</div>
+                    <div class="module-copy">
+                        <h3 class="module-name">User management</h3>
+                        <p>Create staff accounts, set roles, and keep the kitchen roster current.</p>
+                    </div>
+                </div>
+                <span class="status-chip active">Open</span>
+            </div>
+
+            <div class="module-meta">
+                <span>Ready for daily use</span>
+                <a asp-controller="Users" asp-action="Index" class="action-link">Launch</a>
+            </div>
+        </article>
+
+        <article class="module-card">
+            <div class="module-card-top">
+                <div class="module-card-title">
+                    <div class="staff-avatar">CT</div>
+                    <div class="module-copy">
+                        <h3 class="module-name">Product management</h3>
+                        <p>Manage products, prices, stock levels, and category assignments from one place.</p>
+                    </div>
+                </div>
+                <span class="status-chip active">Open</span>
+            </div>
+
+            <div class="module-meta">
+                <span>Catalog controls live</span>
+                <a asp-controller="Products" asp-action="Index" class="action-link">Launch</a>
+            </div>
+        </article>
+
+        <article class="module-card">
+            <div class="module-card-top">
+                <div class="module-card-title">
+                    <div class="staff-avatar">RP</div>
+                    <div class="module-copy">
+                        <h3 class="module-name">Reports desk</h3>
+                        <p>Daily throughput, completed tickets, and courier timing can live here next.</p>
+                    </div>
+                </div>
+                <span class="status-chip inactive">Planned</span>
+            </div>
+
+            <div class="module-meta">
+                <span>Metrics lane</span>
+                <span>Board-ready cards</span>
+            </div>
+        </article>
+
+        <article class="module-card">
+            <div class="module-card-top">
+                <div class="module-card-title">
+                    <div class="staff-avatar">SC</div>
+                    <div class="module-copy">
+                        <h3 class="module-name">Security controls</h3>
+                        <p>Session policy, role visibility, and login protections remain easy to review.</p>
+                    </div>
+                </div>
+                <span class="status-chip active">Live</span>
+            </div>
+
+            <div class="module-meta">
+                <span>Current protection notes</span>
+                <a asp-controller="Home" asp-action="Privacy" class="action-link">Open</a>
+            </div>
+        </article>
+    </section>
+
+    <section class="section-card">
+        <div class="section-heading">
+            <div>
+                <p class="section-meta mb-2">Operations note</p>
+                <h2 class="section-title">Kitchen admin stays focused on flow</h2>
+            </div>
+        </div>
+
+        <div class="info-list">
+            <div class="info-row">
+                <div>
+                    <strong>Staff board first</strong>
+                    <span>The highest-traffic admin task stays one click away from the live service workspace.</span>
+                </div>
+            </div>
+            <div class="info-row">
+                <div>
+                    <strong>Module placeholders are intentional</strong>
+                    <span>The visual system is now ready for real catalog, reporting, and operational settings screens.</span>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>

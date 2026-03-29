@@ -1,83 +1,258 @@
+@using System.Linq
+@{
+    var fullName = User.FindFirst("full_name")?.Value ?? User.Identity?.Name ?? "Guest User";
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Guest";
+    var isSignedIn = User.Identity?.IsAuthenticated ?? false;
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+    var isAuthPage = string.Equals(controller, "Account", StringComparison.OrdinalIgnoreCase)
+        && (string.Equals(action, "Login", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(action, "AccessDenied", StringComparison.OrdinalIgnoreCase));
+    var bodyClass = ViewData["BodyClass"]?.ToString() ?? string.Empty;
+    var initials = string.Concat(fullName
+        .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Take(2)
+        .Select(part => char.ToUpperInvariant(part[0])));
+
+    if (string.IsNullOrWhiteSpace(initials))
+    {
+        initials = "PS";
+    }
+
+    var shiftLabel = isSignedIn ? $"{role} station" : "Awaiting sign in";
+    var shiftDate = DateTime.Now.ToString("d MMM yyyy");
+    var shiftTime = DateTime.Now.ToString("hh:mm:ss tt");
+    var bodyClasses = string.Join(" ", new[]
+    {
+        bodyClass,
+        isAuthPage ? "auth-page" : "app-page"
+    }.Where(value => !string.IsNullOrWhiteSpace(value)));
+    var searchPrompt = controller switch
+    {
+        "Users" => "Search staff, roles, and access",
+        "Products" => "Browse products, prices, and stock",
+        "Categories" => "Filter catalog sections and records",
+        "Sales" => "Search products, manage the cart, and complete checkout",
+        "Home" when string.Equals(action, "Sales", StringComparison.OrdinalIgnoreCase) => "Track kitchen tickets and dispatch lanes",
+        "Home" when string.Equals(action, "Admin", StringComparison.OrdinalIgnoreCase) => "Open settings, staffing, and catalog controls",
+        "Home" when string.Equals(action, "Privacy", StringComparison.OrdinalIgnoreCase) => "Review security notes and access rules",
+        _ => "Scan orders, menu items, and service flow"
+    };
+
+    string NavState(string targetController, string? targetAction = null)
+    {
+        var controllerMatch = string.Equals(controller, targetController, StringComparison.OrdinalIgnoreCase);
+        var actionMatch = targetAction is null || string.Equals(action, targetAction, StringComparison.OrdinalIgnoreCase);
+        return controllerMatch && actionMatch ? "active" : string.Empty;
+    }
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - POS_System</title>
+    <title>@ViewData["Title"] - POS System</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/theme-refresh.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/POS_System.styles.css" asp-append-version="true" />
 </head>
-<body>
-    @{
-        var fullName = User.FindFirst("full_name")?.Value ?? User.Identity?.Name ?? "Guest";
-        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-    }
-
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">POS_System</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav me-auto mb-2 mb-sm-0">
-                        @if (User.Identity?.IsAuthenticated ?? false)
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Dashboard</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Sales">Sales</a>
-                            </li>
-                            @if (User.IsInRole("Admin"))
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Admin">Admin</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="" asp-controller="Users" asp-action="Index">Users</a>
-                                </li>
-                            }
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Security</a>
-                            </li>
-                        }
-                    </ul>
-
-                    <div class="d-flex align-items-center gap-3">
-                        @if (User.Identity?.IsAuthenticated ?? false)
-                        {
-                            <div class="text-end">
-                                <div class="fw-semibold">@fullName</div>
-                                <div class="small text-muted">@role</div>
-                            </div>
-                            <form asp-controller="Account" asp-action="Logout" method="post" class="mb-0">
-                                <button type="submit" class="btn btn-outline-secondary btn-sm">Logout</button>
-                            </form>
-                        }
-                        else
-                        {
-                            <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Login">Login</a>
-                        }
-                    </div>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+<body class="@bodyClasses">
+    @if (isAuthPage)
+    {
+        <main class="auth-shell" role="main">
             @RenderBody()
         </main>
-    </div>
+    }
+    else
+    {
+        <div class="pos-shell">
+            <aside class="app-sidebar" aria-label="Primary">
+                <div class="sidebar-header">
+                    <a class="sidebar-brand" asp-controller="Sales" asp-action="Index" aria-label="POS system home">
+                        <span class="sidebar-brand-mark" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M5 18.5H19" />
+                                <path d="M7 16V18.5" />
+                                <path d="M17 16V18.5" />
+                                <path d="M6 8.5L9 11.5L12 6L15 11.5L18 8.5" />
+                                <path d="M8.5 4.5L10 6" />
+                                <path d="M15.5 4.5L14 6" />
+                            </svg>
+                        </span>
+                        <span class="sidebar-brand-copy">
+                            <strong>POS System</strong>
+                            <span>Restaurant Console</span>
+                        </span>
+                    </a>
+                </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - POS_System
+                <div class="sidebar-divider" aria-hidden="true"></div>
+                <p class="sidebar-menu-title">Main Menu</p>
+
+                <div class="sidebar-nav-scroll">
+                    <nav class="sidebar-nav">
+                        <a class="sidebar-link @NavState("Sales", "Index")" asp-controller="Sales" asp-action="Index" title="Counter" aria-label="Counter">
+                            <span class="sidebar-link-icon">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M7 4H17V20L14.5 18.5L12 20L9.5 18.5L7 20V4Z" />
+                                    <path d="M10 8H14" />
+                                    <path d="M10 12H14" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-label">Counter</span>
+                        </a>
+
+                        <a class="sidebar-link @NavState("Home", "Index")" asp-controller="Home" asp-action="Index" title="Orders" aria-label="Orders">
+                            <span class="sidebar-link-icon">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M5 4.5H19" />
+                                    <path d="M5 8.5H19" />
+                                    <path d="M8 12.5H12" />
+                                    <path d="M4.5 3.5V20.5H19.5V3.5" />
+                                    <path d="M16 13.5C17.38 13.5 18.5 14.62 18.5 16C18.5 17.38 17.38 18.5 16 18.5C14.62 18.5 13.5 17.38 13.5 16C13.5 14.62 14.62 13.5 16 13.5Z" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-label">Orders</span>
+                        </a>
+
+                        <a class="sidebar-link @NavState("Home", "Sales")" asp-controller="Home" asp-action="Sales" title="Kitchen Board" aria-label="Kitchen Board">
+                            <span class="sidebar-link-icon">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M6 11H18V16C18 18.21 16.21 20 14 20H10C7.79 20 6 18.21 6 16V11Z" />
+                                    <path d="M4 11H20" />
+                                    <path d="M9 8V5" />
+                                    <path d="M15 8V5" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-label">Kitchen Board</span>
+                        </a>
+
+                        <a class="sidebar-link @NavState("Home", "Privacy")" asp-controller="Home" asp-action="Privacy" title="Security Notes" aria-label="Security Notes">
+                            <span class="sidebar-link-icon">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M12 3L19 6V11C19 15.55 16.05 19.74 12 21C7.95 19.74 5 15.55 5 11V6L12 3Z" />
+                                    <path d="M9.5 12.5L11 14L14.5 10.5" />
+                                </svg>
+                            </span>
+                            <span class="sidebar-label">Security Notes</span>
+                        </a>
+
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <a class="sidebar-link @NavState("Home", "Admin")" asp-controller="Home" asp-action="Admin" title="Operations Settings" aria-label="Operations Settings">
+                                <span class="sidebar-link-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M5 6H19" />
+                                        <path d="M8 12H16" />
+                                        <path d="M10 18H14" />
+                                    </svg>
+                                </span>
+                                <span class="sidebar-label">Operations Settings</span>
+                            </a>
+
+                            <a class="sidebar-link @NavState("Users", "Index")" asp-controller="Users" asp-action="Index" title="User Management" aria-label="User Management">
+                                <span class="sidebar-link-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M8 11C9.66 11 11 9.66 11 8C11 6.34 9.66 5 8 5C6.34 5 5 6.34 5 8C5 9.66 6.34 11 8 11Z" />
+                                        <path d="M16.5 10.5C17.88 10.5 19 9.38 19 8C19 6.62 17.88 5.5 16.5 5.5C15.12 5.5 14 6.62 14 8C14 9.38 15.12 10.5 16.5 10.5Z" />
+                                        <path d="M3.5 18.5C3.5 15.74 5.74 13.5 8.5 13.5H9C11.76 13.5 14 15.74 14 18.5" />
+                                        <path d="M14.5 18.5C14.5 16.43 16.18 14.75 18.25 14.75H18.5C20.57 14.75 22.25 16.43 22.25 18.5" />
+                                    </svg>
+                                </span>
+                                <span class="sidebar-label">User Management</span>
+                            </a>
+
+                            <a class="sidebar-link @NavState("Categories", "Index")" asp-controller="Categories" asp-action="Index" title="Categories" aria-label="Categories">
+                                <span class="sidebar-link-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M12 3L4 7L12 11L20 7L12 3Z" />
+                                        <path d="M4 12L12 16L20 12" />
+                                        <path d="M4 17L12 21L20 17" />
+                                    </svg>
+                                </span>
+                                <span class="sidebar-label">Categories</span>
+                            </a>
+
+                            <a class="sidebar-link @NavState("Products", "Index")" asp-controller="Products" asp-action="Index" title="Products" aria-label="Products">
+                                <span class="sidebar-link-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M5 8.5L12 4L19 8.5L12 13L5 8.5Z" />
+                                        <path d="M5 8.5V15.5L12 20L19 15.5V8.5" />
+                                        <path d="M12 13V20" />
+                                    </svg>
+                                </span>
+                                <span class="sidebar-label">Products</span>
+                            </a>
+                        }
+                    </nav>
+                </div>
+
+                <div class="sidebar-spacer"></div>
+
+                @if (isSignedIn)
+                {
+                    <div class="sidebar-footer">
+                        <div class="sidebar-footer-card">
+                            <div class="sidebar-user-card">
+                                <div class="avatar">@initials</div>
+                                <div class="sidebar-user-copy">
+                                    <strong>@fullName</strong>
+                                    <span>@shiftLabel</span>
+                                </div>
+                            </div>
+
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="sidebar-logout">
+                                <button type="submit" class="sidebar-logout-button" aria-label="Logout">
+                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                        <path d="M14 7L19 12L14 17" />
+                                        <path d="M19 12H10" />
+                                        <path d="M10 4H6.5C5.67 4 5 4.67 5 5.5V18.5C5 19.33 5.67 20 6.5 20H10" />
+                                    </svg>
+                                    <span>Logout</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                }
+            </aside>
+
+            <div class="app-workspace">
+                <header class="workspace-header">
+                    <div class="workspace-search" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <circle cx="11" cy="11" r="6"></circle>
+                            <path d="M20 20L16.65 16.65"></path>
+                        </svg>
+                        <span>@searchPrompt</span>
+                    </div>
+
+                    <div class="workspace-tools">
+                        <div class="utility-pill utility-pill-date">
+                            <span class="utility-pill-label">Live shift</span>
+                            <strong>@shiftDate</strong>
+                            <span>@shiftTime</span>
+                        </div>
+
+                        @if (isSignedIn)
+                        {
+                            <div class="utility-pill user-pill">
+                                <div class="avatar">@initials</div>
+                                <div class="user-pill-copy">
+                                    <strong>@fullName</strong>
+                                    <span>@shiftLabel</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </header>
+
+                <main class="workspace-main" role="main">
+                    @RenderBody()
+                </main>
+            </div>
         </div>
-    </footer>
+    }
+
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>

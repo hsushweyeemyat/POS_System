@@ -3,42 +3,72 @@
     ViewData["Title"] = "Sign In";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow-sm mt-4">
-            <div class="card-body p-4">
-                <h1 class="h3 mb-3 text-center">POS Sign In</h1>
-                <p class="text-muted text-center mb-4">Use your shop account to continue.</p>
+<div class="auth-layout auth-layout-centered">
+    <section class="auth-card">
+        <p class="auth-kicker">Counter Access</p>
+        <h2>Sign in to continue</h2>
+        <p class="auth-copy">Use your staff account to open orders, kitchen flow, and catalog tools from the refreshed POS workspace.</p>
 
-                <form asp-action="Login" method="post">
-                    <input asp-for="ReturnUrl" type="hidden" />
+        <form asp-action="Login" method="post" class="page-shell">
+            <input asp-for="ReturnUrl" type="hidden" />
+            <input asp-for="RememberMe" type="hidden" value="false" />
 
-                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div asp-validation-summary="ModelOnly" class="message-banner text-danger"></div>
 
-                    <div class="mb-3">
-                        <label asp-for="Email" class="form-label"></label>
-                        <input asp-for="Email" class="form-control" autocomplete="username" />
-                        <span asp-validation-for="Email" class="text-danger"></span>
-                    </div>
-
-                    <div class="mb-3">
-                        <label asp-for="Password" class="form-label"></label>
-                        <input asp-for="Password" class="form-control" autocomplete="current-password" />
-                        <span asp-validation-for="Password" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-check mb-3">
-                        <input asp-for="RememberMe" class="form-check-input" />
-                        <label asp-for="RememberMe" class="form-check-label"></label>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100">Sign In</button>
-                </form>
+            <div>
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" autocomplete="username" />
+                <span asp-validation-for="Email" class="text-danger"></span>
             </div>
-        </div>
-    </div>
+
+            <div>
+                <label asp-for="Password" class="form-label"></label>
+                <div class="password-field">
+                    <input asp-for="Password" class="form-control password-input" autocomplete="current-password" />
+                    <button type="button" class="password-toggle" id="login-password-toggle" aria-label="Show password" aria-pressed="false">
+                        <span class="password-toggle-icon password-toggle-show" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M2 12C3.73 8.39 7.53 6 12 6C16.47 6 20.27 8.39 22 12C20.27 15.61 16.47 18 12 18C7.53 18 3.73 15.61 2 12Z" />
+                                <circle cx="12" cy="12" r="3.2" />
+                            </svg>
+                        </span>
+                        <span class="password-toggle-icon password-toggle-hide" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none">
+                                <path d="M3 4L21 20" />
+                                <path d="M10.58 10.58C10.22 10.94 10 11.44 10 12C10 13.1 10.9 14 12 14C12.56 14 13.06 13.78 13.42 13.42" />
+                                <path d="M9.88 5.09C10.57 4.98 11.28 4.92 12 4.92C16.47 4.92 20.27 7.31 22 10.92C21.18 12.63 19.95 14.08 18.44 15.16" />
+                                <path d="M6.11 6.58C4.42 7.58 3.03 9.06 2 10.92C3.73 14.53 7.53 16.92 12 16.92C13.21 16.92 14.37 16.74 15.44 16.4" />
+                            </svg>
+                        </span>
+                    </button>
+                </div>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+
+    </section>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const toggle = document.getElementById('login-password-toggle');
+            const passwordInput = document.getElementById('Password');
+
+            if (!toggle || !passwordInput) {
+                return;
+            }
+
+            toggle.addEventListener('click', () => {
+                const isVisible = passwordInput.type === 'text';
+                passwordInput.type = isVisible ? 'password' : 'text';
+                toggle.classList.toggle('is-visible', !isVisible);
+                toggle.setAttribute('aria-pressed', (!isVisible).toString());
+                toggle.setAttribute('aria-label', isVisible ? 'Show password' : 'Hide password');
+            });
+        })();
+    </script>
 }

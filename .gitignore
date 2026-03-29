@@ -1,0 +1,17 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# .NET build outputs
+**/bin/
+**/obj/
+
+# Local tooling outputs
+.codex-bin/
+.codex-obj/
+
+# Test results
+TestResults/

@@ -34,7 +34,7 @@ public class HomeController : Controller
     [Authorize(Policy = "SalesAccess")]
     public IActionResult Sales()
     {
-        return View();
+        return RedirectToAction("Index", "Sales");
     }
 
     [AllowAnonymous]
