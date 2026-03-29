@@ -14,7 +14,6 @@
     <section class="users-toolbar">
         <div class="board-heading">
             <h2>Sale History</h2>
-            <p>Review completed sales, search by invoice number, and open the read-only invoice view for any recorded transaction.</p>
         </div>
 
         <a asp-controller="Sales" asp-action="Index" class="btn btn-outline-secondary">Back to Counter</a>
@@ -25,7 +24,6 @@
             <div class="section-heading-copy">
                 <span class="sales-kicker">Read-only history</span>
                 <h2 class="section-title">@Model.ScopeLabel</h2>
-                <p class="section-description">Completed sales stay unchanged after checkout. Search by invoice number and narrow results by sale date or date range.</p>
             </div>
             <span class="section-meta-pill">@Model.FilterLabel</span>
         </div>
@@ -34,12 +32,10 @@
             <article class="stats-card">
                 <span>Matching sales</span>
                 <strong>@Model.SalesPage.TotalCount.ToString("N0")</strong>
-                <small>Completed transactions that match the current filters.</small>
             </article>
             <article class="stats-card">
                 <span>Visible total</span>
                 <strong>MMK @Model.VisibleTotalAmount.ToString("N0")</strong>
-                <small>Combined total amount for the sales shown on this page.</small>
             </article>
             <article class="stats-card">
                 <span>Access scope</span>
@@ -53,7 +49,6 @@
         <div class="section-heading">
             <div class="section-heading-copy">
                 <h2 class="section-title">Filters</h2>
-                <p class="section-description">Use a single date for one day or set both dates to review a longer range.</p>
             </div>
         </div>
 
@@ -101,7 +96,6 @@
     <section class="users-table-controls">
         <div class="sales-history-results-copy">
             <strong>@Model.FilterLabel</strong>
-            <p class="sales-meta-copy">Each row links to a recorded invoice with the completed item breakdown, totals, sale date, and cashier information.</p>
         </div>
 
         <div class="users-result-pill">

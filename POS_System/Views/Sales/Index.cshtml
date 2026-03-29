@@ -13,24 +13,20 @@
         <div class="sales-dashboard-copy">
             <span class="sales-dashboard-kicker">Main Screen</span>
             <h2 class="section-title">Sales Dashboard</h2>
-            <p class="section-description">Browse by category, tap products to add them, and complete checkout from one working surface.</p>
         </div>
 
         <div class="stats-row sales-summary-strip">
             <article class="stats-card">
                 <span>Visible products</span>
                 <strong id="sales-visible-products">@Model.ProductCount.ToString("N0")</strong>
-                <small>Items shown for the current category and search.</small>
             </article>
             <article class="stats-card">
                 <span>Items in cart</span>
                 <strong id="sales-cart-quantity">@Model.Cart.TotalQuantity.ToString("N0")</strong>
-                <small>Updated instantly as cashiers build the sale.</small>
             </article>
             <article class="stats-card">
                 <span>Total payable</span>
                 <strong id="sales-cart-total">MMK @Model.Cart.TotalAmount.ToString("N0")</strong>
-                <small>Live total from the current cart contents.</small>
             </article>
         </div>
     </section>
@@ -41,8 +37,6 @@
                 <div class="sales-catalog-head">
                     <div class="section-heading-copy">
                         <span id="sales-active-category-label" class="sales-kicker">All Items</span>
-                        <h2 class="section-title">Product Browser</h2>
-                        <p class="section-description">Tap a product card to add it directly into the cart.</p>
                     </div>
 
                     <label class="board-search sales-search-box" for="sales-search-input">
@@ -56,7 +50,6 @@
 
                 <div class="sales-catalog-meta">
                     <div id="sales-results-count" class="users-result-pill"><span>@Model.ProductCount.ToString("N0")</span> results</div>
-                    <span class="sales-meta-copy">Live stock stays in sync, and category pills help cashiers browse faster.</span>
                 </div>
 
                 <div id="sales-category-strip" class="sales-category-strip" role="tablist" aria-label="Product categories"></div>
@@ -65,7 +58,6 @@
 
                 <div id="sales-products-empty" class="empty-state sales-empty-state d-none">
                     <strong>No products found</strong>
-                    <p>Try another keyword or switch back to All Items.</p>
                 </div>
             </section>
         </div>
@@ -74,10 +66,9 @@
             <div class="section-heading">
                 <div class="section-heading-copy">
                     <span class="sales-kicker">Current Cart</span>
+                    <br />
                     <h2 class="section-title">Checkout Panel</h2>
-                    <p class="section-description">Review items, adjust quantities, and complete the current sale.</p>
                 </div>
-                <span class="section-meta-pill">Session cart</span>
             </div>
 
             <div id="sales-cart-note" class="message-banner sales-cart-note d-none"></div>
