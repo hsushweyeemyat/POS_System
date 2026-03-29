@@ -1,6 +1,6 @@
 {
   "Version": 1,
-  "Hash": "wvdgAEK+byZyrPul51jk8mA0/T2G1ZR/bHRago+PaZA=",
+  "Hash": "c2WlYW+cLuRm9T56/TbVGnhH4OYXS0nWpf0hxQrTWdo=",
   "Source": "POS_System",
   "BasePath": "_content/POS_System",
   "Mode": "Default",
@@ -91,6 +91,25 @@
       "CopyToOutputDirectory": "Never",
       "CopyToPublishDirectory": "PreserveNewest",
       "OriginalItemSpec": "wwwroot\\css\\theme-refresh.css"
+    },
+    {
+      "Identity": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\Design.html",
+      "SourceId": "POS_System",
+      "SourceType": "Discovered",
+      "ContentRoot": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\",
+      "BasePath": "_content/POS_System",
+      "RelativePath": "Design.html",
+      "AssetKind": "All",
+      "AssetMode": "All",
+      "AssetRole": "Primary",
+      "AssetMergeBehavior": "PreferTarget",
+      "AssetMergeSource": "",
+      "RelatedAsset": "",
+      "AssetTraitName": "",
+      "AssetTraitValue": "",
+      "CopyToOutputDirectory": "Never",
+      "CopyToPublishDirectory": "PreserveNewest",
+      "OriginalItemSpec": "wwwroot\\Design.html"
     },
     {
       "Identity": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\favicon.ico",

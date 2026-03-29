@@ -1,0 +1,288 @@
+@model SalesHistoryIndexViewModel
+@{
+    ViewData["Title"] = "Sale History";
+    var hasSales = Model.SalesPage.Items.Count > 0;
+    var currentPageLabel = Model.SalesPage.TotalCount == 0 ? "0" : Model.SalesPage.Page.ToString();
+    var pageSummary = Model.SalesPage.TotalCount == 0
+        ? "Page 0 of 0"
+        : $"Page {Model.SalesPage.Page} of {Model.SalesPage.TotalPages}";
+    var startDateValue = Model.Query.StartDate?.ToString("yyyy-MM-dd");
+    var endDateValue = Model.Query.EndDate?.ToString("yyyy-MM-dd");
+}
+
+<div class="page-shell">
+    <section class="users-toolbar">
+        <div class="board-heading">
+            <h2>Sale History</h2>
+            <p>Review completed sales, search by invoice number, and open the read-only invoice view for any recorded transaction.</p>
+        </div>
+
+        <a asp-controller="Sales" asp-action="Index" class="btn btn-outline-secondary">Back to Counter</a>
+    </section>
+
+    <section class="section-card sales-summary-card">
+        <div class="section-heading">
+            <div class="section-heading-copy">
+                <span class="sales-kicker">Read-only history</span>
+                <h2 class="section-title">@Model.ScopeLabel</h2>
+                <p class="section-description">Completed sales stay unchanged after checkout. Search by invoice number and narrow results by sale date or date range.</p>
+            </div>
+            <span class="section-meta-pill">@Model.FilterLabel</span>
+        </div>
+
+        <div class="stats-row sales-summary-strip">
+            <article class="stats-card">
+                <span>Matching sales</span>
+                <strong>@Model.SalesPage.TotalCount.ToString("N0")</strong>
+                <small>Completed transactions that match the current filters.</small>
+            </article>
+            <article class="stats-card">
+                <span>Visible total</span>
+                <strong>$@Model.VisibleTotalAmount.ToString("N0")</strong>
+                <small>Combined total amount for the sales shown on this page.</small>
+            </article>
+            <article class="stats-card">
+                <span>Access scope</span>
+                <strong>@(Model.IsAdminView ? "Admin view" : "Cashier view")</strong>
+                <small>@(Model.IsAdminView ? "All recorded sales are visible." : "Your own completed sales are listed here.")</small>
+            </article>
+        </div>
+    </section>
+
+    <section class="section-card">
+        <div class="section-heading">
+            <div class="section-heading-copy">
+                <h2 class="section-title">Filters</h2>
+                <p class="section-description">Use a single date for one day or set both dates to review a longer range.</p>
+            </div>
+        </div>
+
+        <form asp-action="History" method="get" class="sales-history-filter-form">
+            <input type="hidden" name="Page" value="1" />
+            <input type="hidden" name="PageSize" value="@Model.Query.PageSize" />
+
+            <div class="form-grid">
+                <div class="span-2">
+                    <label class="form-label" for="history-search-term">Invoice number</label>
+                    <input id="history-search-term"
+                           name="SearchTerm"
+                           type="search"
+                           class="form-control"
+                           value="@Model.Query.SearchTerm"
+                           placeholder="Search by invoice number..." />
+                </div>
+
+                <div>
+                    <label class="form-label" for="history-start-date">Start date</label>
+                    <input id="history-start-date" name="StartDate" type="date" class="form-control" value="@startDateValue" />
+                </div>
+
+                <div>
+                    <label class="form-label" for="history-end-date">End date</label>
+                    <input id="history-end-date" name="EndDate" type="date" class="form-control" value="@endDateValue" />
+                </div>
+            </div>
+
+            <div class="sales-history-filter-actions">
+                <p class="sales-meta-copy mb-0">
+                    @(Model.IsAdminView
+                        ? "Admins can review all completed sales across any date range."
+                        : "Cashiers default to today's sales until another date filter is applied.")
+                </p>
+
+                <div class="page-actions">
+                    <a asp-action="History" asp-route-pageSize="@Model.Query.PageSize" class="btn btn-outline-secondary">Reset</a>
+                    <button type="submit" class="btn btn-primary">Apply filters</button>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section class="users-table-controls">
+        <div class="sales-history-results-copy">
+            <strong>@Model.FilterLabel</strong>
+            <p class="sales-meta-copy">Each row links to a recorded invoice with the completed item breakdown, totals, sale date, and cashier information.</p>
+        </div>
+
+        <div class="users-result-pill">
+            <span>@Model.SalesPage.TotalCount</span> results
+        </div>
+    </section>
+
+    <section class="users-table-card">
+        <div class="table-responsive d-none d-lg-block @(hasSales ? string.Empty : "d-none")">
+            <table class="table users-table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Invoice No</th>
+                        <th>Sale Date</th>
+                        <th>Total Amount</th>
+                        <th>User</th>
+                        <th>Items</th>
+                        <th class="users-action-column">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var saleEntry in Model.SalesPage.Items.Select((sale, index) => new { sale, index }))
+                    {
+                        var sale = saleEntry.sale;
+                        var rowNumber = Model.SalesPage.FirstItemNumber + saleEntry.index;
+
+                        <tr>
+                            <td>@rowNumber</td>
+                            <td>
+                                <strong>@sale.InvoiceNo</strong>
+                            </td>
+                            <td>@sale.SaleDate.ToString("dd MMM yyyy hh:mm tt")</td>
+                            <td>$@sale.TotalAmount.ToString("N0")</td>
+                            <td>@sale.UserName</td>
+                            <td>
+                                <div class="sales-history-table-note">
+                                    <strong>@sale.LineItemCount.ToString("N0") line(s)</strong>
+                                    <span>@sale.TotalQuantity.ToString("N0") item(s)</span>
+                                </div>
+                            </td>
+                            <td>
+                                <a asp-action="Invoice" asp-route-id="@sale.SaleId" class="btn btn-outline-secondary sales-history-open-button">Open invoice</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="sales-history-mobile-list d-lg-none @(hasSales ? string.Empty : "d-none")">
+            @foreach (var sale in Model.SalesPage.Items)
+            {
+                <article class="sales-history-mobile-card">
+                    <div class="sales-history-mobile-top">
+                        <div class="section-heading-copy">
+                            <span class="sales-card-category tag-beverage">Invoice</span>
+                            <h3 class="section-title">@sale.InvoiceNo</h3>
+                            <p class="sales-meta-copy">@sale.UserName</p>
+                        </div>
+
+                        <a asp-action="Invoice" asp-route-id="@sale.SaleId" class="btn btn-outline-secondary sales-history-open-button">Open invoice</a>
+                    </div>
+
+                    <div class="sales-history-mobile-metrics">
+                        <div class="sales-history-metric">
+                            <span>Sale date</span>
+                            <strong>@sale.SaleDate.ToString("dd MMM yyyy hh:mm tt")</strong>
+                        </div>
+                        <div class="sales-history-metric">
+                            <span>Total amount</span>
+                            <strong>$@sale.TotalAmount.ToString("N0")</strong>
+                        </div>
+                        <div class="sales-history-metric">
+                            <span>Line items</span>
+                            <strong>@sale.LineItemCount.ToString("N0")</strong>
+                        </div>
+                        <div class="sales-history-metric">
+                            <span>Total quantity</span>
+                            <strong>@sale.TotalQuantity.ToString("N0")</strong>
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+
+        <div class="empty-state users-empty-state @(hasSales ? "d-none" : string.Empty)">
+            <strong>No sales found</strong>
+            <p>Try another invoice number or adjust the selected date range.</p>
+        </div>
+    </section>
+
+    <section class="datatable-footer">
+        <div class="datatable-summary-group">
+            <span>@pageSummary</span>
+
+            <form asp-action="History" method="get" class="page-size-form">
+                <input type="hidden" name="Page" value="1" />
+                <input type="hidden" name="SearchTerm" value="@Model.Query.SearchTerm" />
+                <input type="hidden" name="StartDate" value="@startDateValue" />
+                <input type="hidden" name="EndDate" value="@endDateValue" />
+                <label class="page-size-label" for="history-page-size">Rows</label>
+                <div class="page-size-select-wrap">
+                    <select id="history-page-size" name="PageSize" class="form-select page-size-select">
+                        @foreach (var size in new[] { 5, 10, 25, 50 })
+                        {
+                            if (Model.Query.PageSize == size)
+                            {
+                                <option value="@size" selected>@size</option>
+                            }
+                            else
+                            {
+                                <option value="@size">@size</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <div class="pagination-controls">
+            @if (Model.SalesPage.HasPreviousPage)
+            {
+                <a class="page-button"
+                   asp-action="History"
+                   asp-route-page="@(Model.SalesPage.Page - 1)"
+                   asp-route-pageSize="@Model.Query.PageSize"
+                   asp-route-searchTerm="@Model.Query.SearchTerm"
+                   asp-route-startDate="@startDateValue"
+                   asp-route-endDate="@endDateValue"
+                   aria-label="Previous page">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M14 6L8 12L14 18"></path>
+                    </svg>
+                </a>
+            }
+            else
+            {
+                <span class="page-button disabled" aria-disabled="true">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M14 6L8 12L14 18"></path>
+                    </svg>
+                </span>
+            }
+
+            <span class="page-button active">@currentPageLabel</span>
+
+            @if (Model.SalesPage.HasNextPage)
+            {
+                <a class="page-button"
+                   asp-action="History"
+                   asp-route-page="@(Model.SalesPage.Page + 1)"
+                   asp-route-pageSize="@Model.Query.PageSize"
+                   asp-route-searchTerm="@Model.Query.SearchTerm"
+                   asp-route-startDate="@startDateValue"
+                   asp-route-endDate="@endDateValue"
+                   aria-label="Next page">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M10 6L16 12L10 18"></path>
+                    </svg>
+                </a>
+            }
+            else
+            {
+                <span class="page-button disabled" aria-disabled="true">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M10 6L16 12L10 18"></path>
+                    </svg>
+                </span>
+            }
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const pageSizeSelect = document.getElementById('history-page-size');
+            pageSizeSelect?.addEventListener('change', () => {
+                pageSizeSelect.form?.submit();
+            });
+        })();
+    </script>
+}

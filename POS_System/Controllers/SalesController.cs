@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using POS_System.Services.Interfaces;
+using POS_System.ViewModels.Sales;
 
 namespace POS_System.Controllers;
 
@@ -105,12 +106,35 @@ public class SalesController : Controller
             return Forbid();
         }
 
-        var viewModel = await _salesService.GetInvoiceAsync(id, userId, cancellationToken);
+        var viewModel = await _salesService.GetInvoiceAsync(
+            id,
+            userId,
+            User.IsInRole("Admin"),
+            cancellationToken);
 
         if (viewModel is null)
         {
             return NotFound();
         }
+
+        return View(viewModel);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> History(
+        [FromQuery] SalesHistoryListRequestViewModel request,
+        CancellationToken cancellationToken)
+    {
+        if (!TryGetCurrentUserId(out var userId))
+        {
+            return Forbid();
+        }
+
+        var viewModel = await _salesService.BuildHistoryViewModelAsync(
+            userId,
+            User.IsInRole("Admin"),
+            request,
+            cancellationToken);
 
         return View(viewModel);
     }

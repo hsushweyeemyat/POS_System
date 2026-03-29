@@ -6,6 +6,7 @@ using POS_System.Models.Sales;
 using POS_System.Repositories.Interfaces;
 using POS_System.Services.Interfaces;
 using POS_System.ViewModels.Sales;
+using POS_System.ViewModels.Shared;
 
 namespace POS_System.Services.Implementations;
 
@@ -283,9 +284,13 @@ public class SalesService : ISalesService
     public async Task<SalesInvoiceViewModel?> GetInvoiceAsync(
         long saleId,
         int userId,
+        bool isAdmin,
         CancellationToken cancellationToken = default)
     {
-        var sale = await _salesRepository.GetSaleByIdAsync(saleId, userId, cancellationToken);
+        var sale = await _salesRepository.GetSaleByIdAsync(
+            saleId,
+            isAdmin ? null : userId,
+            cancellationToken);
 
         if (sale is null)
         {
@@ -304,11 +309,55 @@ public class SalesService : ISalesService
                 .Select(item => new SalesInvoiceItemViewModel
                 {
                     ProductId = item.ProductId,
+                    ItemLabel = $"Item #{item.ProductId:N0}",
                     ProductName = item.Product?.Name ?? $"Product #{item.ProductId}",
                     Quantity = item.Qty,
                     Price = item.Price
                 })
                 .ToList()
+        };
+    }
+
+    public async Task<SalesHistoryIndexViewModel> BuildHistoryViewModelAsync(
+        int userId,
+        bool isAdmin,
+        SalesHistoryListRequestViewModel request,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedRequest = NormalizeHistoryRequest(request, isAdmin);
+        var historyPage = await _salesRepository.GetSaleHistoryAsync(
+            isAdmin ? null : userId,
+            normalizedRequest.SearchTerm,
+            normalizedRequest.StartDate?.Date,
+            normalizedRequest.EndDate?.Date.AddDays(1),
+            normalizedRequest,
+            cancellationToken);
+
+        var saleItems = historyPage.Items
+            .Select(item => new SalesHistoryListItemViewModel
+            {
+                SaleId = item.SaleId,
+                InvoiceNo = item.InvoiceNo,
+                SaleDate = item.SaleDate,
+                TotalAmount = item.TotalAmount,
+                UserName = item.UserName,
+                LineItemCount = item.LineItemCount,
+                TotalQuantity = item.TotalQuantity
+            })
+            .ToList();
+
+        return new SalesHistoryIndexViewModel
+        {
+            Query = normalizedRequest,
+            IsAdminView = isAdmin,
+            ScopeLabel = isAdmin ? "All completed sales" : "Your completed sales",
+            FilterLabel = BuildHistoryFilterLabel(normalizedRequest, isAdmin),
+            VisibleTotalAmount = saleItems.Sum(item => item.TotalAmount),
+            SalesPage = new PagedResult<SalesHistoryListItemViewModel>(
+                saleItems,
+                historyPage.Page,
+                historyPage.PageSize,
+                historyPage.TotalCount)
         };
     }
 
@@ -562,5 +611,65 @@ public class SalesService : ISalesService
         return product.StockQty <= 0
             ? $"{product.Name} is out of stock."
             : $"Only {product.StockQty:N0} of {product.Name} available in stock.";
+    }
+
+    private static SalesHistoryListRequestViewModel NormalizeHistoryRequest(
+        SalesHistoryListRequestViewModel? request,
+        bool isAdmin)
+    {
+        var normalizedRequest = new SalesHistoryListRequestViewModel
+        {
+            Page = request?.Page ?? PaginationRequest.DefaultPage,
+            PageSize = request?.PageSize ?? PaginationRequest.DefaultPageSize,
+            SearchTerm = request?.SearchTerm?.Trim() ?? string.Empty,
+            StartDate = request?.StartDate?.Date,
+            EndDate = request?.EndDate?.Date
+        };
+
+        if (normalizedRequest.StartDate.HasValue && !normalizedRequest.EndDate.HasValue)
+        {
+            normalizedRequest.EndDate = normalizedRequest.StartDate;
+        }
+        else if (!normalizedRequest.StartDate.HasValue && normalizedRequest.EndDate.HasValue)
+        {
+            normalizedRequest.StartDate = normalizedRequest.EndDate;
+        }
+
+        if (!isAdmin && !normalizedRequest.StartDate.HasValue && !normalizedRequest.EndDate.HasValue)
+        {
+            var today = DateTime.Today;
+            normalizedRequest.StartDate = today;
+            normalizedRequest.EndDate = today;
+        }
+
+        if (normalizedRequest.StartDate.HasValue &&
+            normalizedRequest.EndDate.HasValue &&
+            normalizedRequest.EndDate.Value < normalizedRequest.StartDate.Value)
+        {
+            (normalizedRequest.StartDate, normalizedRequest.EndDate) =
+                (normalizedRequest.EndDate, normalizedRequest.StartDate);
+        }
+
+        return normalizedRequest;
+    }
+
+    private static string BuildHistoryFilterLabel(
+        SalesHistoryListRequestViewModel request,
+        bool isAdmin)
+    {
+        if (!request.StartDate.HasValue || !request.EndDate.HasValue)
+        {
+            return isAdmin ? "All sale dates" : "No date filter applied";
+        }
+
+        var startDate = request.StartDate.Value;
+        var endDate = request.EndDate.Value;
+
+        if (startDate.Date == endDate.Date)
+        {
+            return startDate.ToString("dd MMM yyyy");
+        }
+
+        return $"{startDate:dd MMM yyyy} - {endDate:dd MMM yyyy}";
     }
 }

@@ -34,8 +34,15 @@ public interface ISalesService
         string? searchTerm = null,
         CancellationToken cancellationToken = default);
 
+    Task<SalesHistoryIndexViewModel> BuildHistoryViewModelAsync(
+        int userId,
+        bool isAdmin,
+        SalesHistoryListRequestViewModel request,
+        CancellationToken cancellationToken = default);
+
     Task<SalesInvoiceViewModel?> GetInvoiceAsync(
         long saleId,
         int userId,
+        bool isAdmin,
         CancellationToken cancellationToken = default);
 }

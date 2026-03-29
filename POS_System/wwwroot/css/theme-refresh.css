@@ -1676,6 +1676,80 @@ svg {
   gap: 4px;
 }
 
+.sales-history-filter-form {
+  display: grid;
+  gap: 18px;
+}
+
+.sales-history-filter-actions,
+.sales-history-mobile-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sales-history-results-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.sales-history-results-copy strong {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.sales-history-table-note {
+  display: grid;
+  gap: 4px;
+}
+
+.sales-history-table-note strong {
+  font-size: 0.9rem;
+}
+
+.sales-history-table-note span,
+.sales-history-metric span {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+}
+
+.sales-history-open-button {
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+}
+
+.sales-history-mobile-list {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.sales-history-mobile-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(117, 96, 71, 0.08);
+  border-radius: 22px;
+  background: var(--surface-muted);
+}
+
+.sales-history-mobile-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.sales-history-metric {
+  display: grid;
+  gap: 4px;
+}
+
+.sales-history-metric strong {
+  font-size: 0.95rem;
+}
+
 .ticket-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2506,8 +2580,14 @@ svg {
   }
 
   .sales-cart-item-footer,
-  .sales-catalog-meta {
+  .sales-catalog-meta,
+  .sales-history-filter-actions,
+  .sales-history-mobile-top {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .sales-history-mobile-metrics {
+    grid-template-columns: 1fr;
   }
 }

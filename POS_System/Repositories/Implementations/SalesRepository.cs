@@ -2,7 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using POS_System.Data.Contexts;
 using POS_System.Data.Entities;
+using POS_System.Extensions;
+using POS_System.Models.Sales;
 using POS_System.Repositories.Interfaces;
+using POS_System.ViewModels.Shared;
 
 namespace POS_System.Repositories.Implementations;
 
@@ -145,11 +148,66 @@ public class SalesRepository : ISalesRepository
         return _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    public async Task<TblSale?> GetSaleByIdAsync(long saleId, int userId, CancellationToken cancellationToken = default)
+    public Task<PagedResult<SaleHistoryRecord>> GetSaleHistoryAsync(
+        int? userId,
+        string? searchTerm,
+        DateTime? startDateInclusive,
+        DateTime? endDateExclusive,
+        PaginationRequest request,
+        CancellationToken cancellationToken = default)
     {
-        return await _dbContext.TblSales
+        var query = _dbContext.TblSales.AsNoTracking();
+
+        if (userId.HasValue)
+        {
+            query = query.Where(sale => sale.UserId == userId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var pattern = $"%{EscapeLikePattern(searchTerm.Trim())}%";
+            query = query.Where(sale => EF.Functions.Like(sale.InvoiceNo, pattern));
+        }
+
+        if (startDateInclusive.HasValue)
+        {
+            query = query.Where(sale => sale.SaleDate >= startDateInclusive.Value);
+        }
+
+        if (endDateExclusive.HasValue)
+        {
+            query = query.Where(sale => sale.SaleDate < endDateExclusive.Value);
+        }
+
+        return query
+            .OrderByDescending(sale => sale.SaleDate)
+            .ThenByDescending(sale => sale.Id)
+            .Select(sale => new SaleHistoryRecord
+            {
+                SaleId = sale.Id,
+                InvoiceNo = sale.InvoiceNo,
+                SaleDate = sale.SaleDate,
+                TotalAmount = sale.TotalAmount,
+                UserId = sale.UserId,
+                UserName = sale.User == null ? "Unknown cashier" : sale.User.FullName,
+                LineItemCount = sale.SaleItems.Count(),
+                TotalQuantity = sale.SaleItems.Sum(item => (int?)item.Qty) ?? 0
+            })
+            .ToPagedResultAsync(request, cancellationToken);
+    }
+
+    public async Task<TblSale?> GetSaleByIdAsync(long saleId, int? userId, CancellationToken cancellationToken = default)
+    {
+        var query = _dbContext.TblSales
             .AsNoTracking()
-            .Where(sale => sale.Id == saleId && sale.UserId == userId)
+            .Where(sale => sale.Id == saleId);
+
+        if (userId.HasValue)
+        {
+            query = query.Where(sale => sale.UserId == userId.Value);
+        }
+
+        return await query
             .Select(sale => new TblSale
             {
                 Id = sale.Id,

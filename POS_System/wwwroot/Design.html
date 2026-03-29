@@ -1,0 +1,1312 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetailPOS - Point of Sale System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            --sidebar-width: 260px;
+            --header-height: 60px;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        /* Login Screen */
+        .login-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-box {
+            background: white;
+            padding: 2.5rem;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Layout Structure */
+        .app-container {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: #1e293b;
+            color: white;
+            z-index: 1000;
+            transition: transform 0.3s;
+            overflow-y: auto;
+        }
+
+        .sidebar-brand {
+            padding: 1.5rem;
+            border-bottom: 1px solid #334155;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .nav-link {
+            color: #94a3b8;
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            cursor: pointer;
+        }
+
+            .nav-link:hover, .nav-link.active {
+                color: white;
+                background: #334155;
+                border-left-color: var(--primary-color);
+                text-decoration: none;
+            }
+
+            .nav-link i {
+                width: 24px;
+                text-align: center;
+            }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding-top: var(--header-height);
+            min-height: 100vh;
+        }
+
+        .top-header {
+            position: fixed;
+            top: 0;
+            right: 0;
+            left: var(--sidebar-width);
+            height: var(--header-height);
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 2rem;
+            z-index: 999;
+        }
+
+        /* POS Terminal Layout */
+        .pos-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            height: calc(100vh - var(--header-height));
+            overflow: hidden;
+        }
+
+        .products-section {
+            background: #f9fafb;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .cart-section {
+            background: white;
+            border-left: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .category-pills {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .category-pill {
+            white-space: nowrap;
+            padding: 0.5rem 1.25rem;
+            border-radius: 50px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+            .category-pill:hover, .category-pill.active {
+                background: var(--primary-color);
+                color: white;
+                border-color: var(--primary-color);
+            }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+            .product-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                border-color: var(--primary-color);
+            }
+
+        .product-image {
+            width: 100%;
+            height: 120px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .product-name {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 0.25rem;
+            font-size: 0.95rem;
+        }
+
+        .product-price {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .product-stock {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        /* Cart Styles */
+        .cart-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            background: white;
+        }
+
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .cart-item-info h6 {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #1f2937;
+        }
+
+        .cart-item-price {
+            color: #6b7280;
+            font-size: 0.85rem;
+        }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .qty-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .cart-footer {
+            padding: 1.5rem;
+            border-top: 2px solid #e5e7eb;
+            background: white;
+        }
+
+        .cart-total {
+            display: flex;
+            justify-content: space-between;
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1f2937;
+        }
+
+        .checkout-btn {
+            width: 100%;
+            padding: 1rem;
+            background: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+            .checkout-btn:hover {
+                background: #059669;
+                transform: translateY(-1px);
+            }
+
+            .checkout-btn:disabled {
+                background: #9ca3af;
+                cursor: not-allowed;
+                transform: none;
+            }
+
+        /* Admin Views */
+        .content-section {
+            display: none;
+            padding: 2rem;
+            max-width: 1400px;
+        }
+
+            .content-section.active {
+                display: block;
+            }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-left: 4px solid var(--primary-color);
+        }
+
+            .stat-card.success {
+                border-left-color: var(--success-color);
+            }
+
+            .stat-card.warning {
+                border-left-color: var(--warning-color);
+            }
+
+            .stat-card.danger {
+                border-left-color: var(--danger-color);
+            }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0.5rem 0;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.875rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+            .action-btn.primary {
+                background: #dbeafe;
+                color: var(--primary-color);
+            }
+
+            .action-btn.danger {
+                background: #fee2e2;
+                color: var(--danger-color);
+            }
+
+            .action-btn.success {
+                background: #d1fae5;
+                color: var(--success-color);
+            }
+
+        /* Mobile Responsive */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+                .sidebar.open {
+                    transform: translateX(0);
+                }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .top-header {
+                left: 0;
+            }
+
+            .pos-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+
+            .cart-section {
+                border-left: none;
+                border-top: 1px solid #e5e7eb;
+                max-height: 40vh;
+            }
+        }
+
+        .role-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+            .role-badge.admin {
+                background: #dbeafe;
+                color: #1e40af;
+            }
+
+            .role-badge.cashier {
+                background: #d1fae5;
+                color: #065f46;
+            }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6b7280;
+        }
+
+        .search-box {
+            position: relative;
+            max-width: 400px;
+        }
+
+            .search-box input {
+                padding-left: 2.5rem;
+                border-radius: 50px;
+                border: 1px solid #e5e7eb;
+            }
+
+            .search-box i {
+                position: absolute;
+                left: 1rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #9ca3af;
+            }
+
+        .modal-backdrop {
+            background: rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login Screen -->
+    <div class="login-container" id="loginView">
+        <div class="login-box">
+            <div class="text-center mb-4">
+                <i class="fas fa-cash-register fa-3x text-primary mb-3"></i>
+                <h2 class="fw-bold">RetailPOS</h2>
+                <p class="text-muted">Sign in to your account</p>
+            </div>
+            <form id="loginForm">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Email Address</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                        <input type="email" class="form-control" id="email" placeholder="admin@pos.com or cashier@pos.com" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Password</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <input type="password" class="form-control" id="password" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" id="remember">
+                    <label class="form-check-label" for="remember">Remember me</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                    <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                </button>
+            </form>
+            <div class="mt-3 text-center">
+                <small class="text-muted">Demo: admin@pos.com (Admin) or cashier@pos.com (Cashier)</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div class="app-container" id="appContainer">
+        <!-- Sidebar -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <i class="fas fa-cash-register"></i>
+                <span>RetailPOS</span>
+            </div>
+            <div class="nav flex-column">
+                <a class="nav-link active" onclick="showView('pos')">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>POS Terminal</span>
+                </a>
+                <a class="nav-link" onclick="showView('products')" id="navProducts">
+                    <i class="fas fa-box"></i>
+                    <span>Products</span>
+                </a>
+                <a class="nav-link" onclick="showView('sales')">
+                    <i class="fas fa-receipt"></i>
+                    <span>Sales History</span>
+                </a>
+                <a class="nav-link" onclick="showView('reports')" id="navReports">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Reports</span>
+                </a>
+                <a class="nav-link" onclick="showView('users')" id="navUsers">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                </a>
+                <div class="mt-auto border-top border-secondary pt-3">
+                    <a class="nav-link text-danger" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Top Header -->
+        <header class="top-header">
+            <div class="d-flex align-items-center gap-3">
+                <button class="btn btn-sm btn-light d-lg-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h5 class="mb-0 fw-semibold" id="pageTitle">POS Terminal</h5>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end">
+                    <div class="fw-semibold" id="userName">Admin User</div>
+                    <small class="text-muted" id="userRole">Administrator</small>
+                </div>
+                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:40px;height:40px">
+                    <i class="fas fa-user"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- POS Terminal View -->
+            <div id="posView" class="content-section active" style="display: block; padding: 0;">
+                <div class="pos-container">
+                    <!-- Products Section -->
+                    <div class="products-section">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="search-box flex-grow-1 me-3">
+                                <i class="fas fa-search"></i>
+                                <input type="text" class="form-control" id="productSearch" placeholder="Search products by name or barcode..." onkeyup="filterProducts()">
+                            </div>
+                            <button class="btn btn-outline-secondary" onclick="clearCart()">
+                                <i class="fas fa-barcode me-2"></i>Scan
+                            </button>
+                        </div>
+
+                        <div class="category-pills">
+                            <div class="category-pill active" onclick="filterCategory('all')">All Items</div>
+                            <div class="category-pill" onclick="filterCategory('electronics')">Electronics</div>
+                            <div class="category-pill" onclick="filterCategory('clothing')">Clothing</div>
+                            <div class="category-pill" onclick="filterCategory('food')">Food & Beverage</div>
+                            <div class="category-pill" onclick="filterCategory('home')">Home & Garden</div>
+                            <div class="category-pill" onclick="filterCategory('sports')">Sports</div>
+                        </div>
+
+                        <div class="product-grid" id="productGrid">
+                            <!-- Products rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Cart Section -->
+                    <div class="cart-section">
+                        <div class="cart-header">
+                            <h5 class="fw-bold mb-0"><i class="fas fa-shopping-bag me-2"></i>Current Cart</h5>
+                            <small class="text-muted" id="cartItemCount">0 items</small>
+                        </div>
+
+                        <div class="cart-items" id="cartItems">
+                            <div class="empty-state">
+                                <i class="fas fa-cart-plus fa-3x mb-3 text-muted"></i>
+                                <p>Your cart is empty</p>
+                                <small>Click on products to add them</small>
+                            </div>
+                        </div>
+
+                        <div class="cart-footer">
+                            <div class="d-flex justify-content-between mb-2 text-muted">
+                                <span>Subtotal</span>
+                                <span id="subtotal">$0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-muted">
+                                <span>Tax (10%)</span>
+                                <span id="tax">$0.00</span>
+                            </div>
+                            <div class="cart-total">
+                                <span>Total</span>
+                                <span id="total">$0.00</span>
+                            </div>
+                            <button class="checkout-btn" id="checkoutBtn" onclick="openCheckout()" disabled>
+                                <i class="fas fa-credit-card"></i>
+                                Proceed to Payment
+                            </button>
+                            <button class="btn btn-outline-danger w-100 mt-2" onclick="clearCart()">
+                                <i class="fas fa-trash-alt me-2"></i>Clear Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Management View -->
+            <div id="productsView" class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" class="form-control" placeholder="Search products...">
+                    </div>
+                    <button class="btn btn-primary" onclick="openProductModal()">
+                        <i class="fas fa-plus me-2"></i>Add Product
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Stock</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productsTable">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sales History View -->
+            <div id="salesView" class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold">Sales History</h5>
+                    <div class="d-flex gap-2">
+                        <input type="date" class="form-control">
+                        <button class="btn btn-outline-secondary">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Date</th>
+                                <th>Cashier</th>
+                                <th>Items</th>
+                                <th>Total</th>
+                                <th>Payment</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesTable">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Reports View -->
+            <div id="reportsView" class="content-section">
+                <div class="row g-4 mb-4">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <small class="text-muted text-uppercase fw-semibold">Today's Sales</small>
+                            <div class="stat-value">$1,284</div>
+                            <small class="text-success"><i class="fas fa-arrow-up"></i> 12% vs yesterday</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card success">
+                            <small class="text-muted text-uppercase fw-semibold">Transactions</small>
+                            <div class="stat-value">42</div>
+                            <small class="text-muted">Avg: $30.57</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card warning">
+                            <small class="text-muted text-uppercase fw-semibold">Low Stock Items</small>
+                            <div class="stat-value">5</div>
+                            <small class="text-danger">Requires attention</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card danger">
+                            <small class="text-muted text-uppercase fw-semibold">Refunds</small>
+                            <div class="stat-value">$45</div>
+                            <small class="text-muted">3 transactions</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="bg-white p-4 rounded-3 shadow-sm">
+                            <h6 class="fw-bold mb-3">Sales Trend (Last 7 Days)</h6>
+                            <div style="height: 300px; background: #f9fafb; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #9ca3af;">
+                                <i class="fas fa-chart-line fa-4x"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="bg-white p-4 rounded-3 shadow-sm">
+                            <h6 class="fw-bold mb-3">Top Selling Products</h6>
+                            <div class="list-group list-group-flush">
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <div>
+                                        <div class="fw-semibold">Wireless Headphones</div>
+                                        <small class="text-muted">124 sold</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">$3,720</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <div>
+                                        <div class="fw-semibold">USB-C Cable</div>
+                                        <small class="text-muted">98 sold</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">$490</span>
+                                </div>
+                                <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <div>
+                                        <div class="fw-semibold">Coffee Mug</div>
+                                        <small class="text-muted">76 sold</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">$760</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Users View -->
+            <div id="usersView" class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold">User Management</h5>
+                    <button class="btn btn-primary">
+                        <i class="fas fa-user-plus me-2"></i>Add User
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px">A</div>
+                                        <span class="fw-semibold">Admin User</span>
+                                    </div>
+                                </td>
+                                <td>admin@pos.com</td>
+                                <td><span class="role-badge admin">Admin</span></td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>Today, 09:30 AM</td>
+                                <td>
+                                    <button class="action-btn primary me-1"><i class="fas fa-edit"></i></button>
+                                    <button class="action-btn danger"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center" style="width:32px;height:32px">J</div>
+                                        <span class="fw-semibold">John Cashier</span>
+                                    </div>
+                                </td>
+                                <td>cashier@pos.com</td>
+                                <td><span class="role-badge cashier">Cashier</span></td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>Today, 08:15 AM</td>
+                                <td>
+                                    <button class="action-btn primary me-1"><i class="fas fa-edit"></i></button>
+                                    <button class="action-btn danger"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="modal fade" id="checkoutModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Checkout</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-center mb-4">
+                        <div class="display-4 fw-bold text-primary" id="checkoutTotal">$0.00</div>
+                        <small class="text-muted">Total Amount</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payment Method</label>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <div class="form-check card p-3 text-center cursor-pointer">
+                                    <input class="form-check-input mx-auto mb-2 d-block" type="radio" name="payment" id="cash" checked>
+                                    <label class="form-check-label fw-semibold" for="cash">
+                                        <i class="fas fa-money-bill-wave d-block mb-1"></i>
+                                        Cash
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-check card p-3 text-center cursor-pointer">
+                                    <input class="form-check-input mx-auto mb-2 d-block" type="radio" name="payment" id="card">
+                                    <label class="form-check-label fw-semibold" for="card">
+                                        <i class="fas fa-credit-card d-block mb-1"></i>
+                                        Card
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="form-check card p-3 text-center cursor-pointer">
+                                    <input class="form-check-input mx-auto mb-2 d-block" type="radio" name="payment" id="digital">
+                                    <label class="form-check-label fw-semibold" for="digital">
+                                        <i class="fas fa-wallet d-block mb-1"></i>
+                                        Digital
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3" id="cashInput">
+                        <label class="form-label fw-semibold">Amount Received</label>
+                        <div class="input-group input-group-lg">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="amountReceived" placeholder="0.00" onkeyup="calculateChange()">
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info" id="changeDisplay" style="display: none;">
+                        <div class="d-flex justify-content-between">
+                            <span>Change:</span>
+                            <span class="fw-bold" id="changeAmount">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="completeSale()">
+                        <i class="fas fa-check-circle me-2"></i>Complete Sale
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Add New Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Product Name</label>
+                        <input type="text" class="form-control" placeholder="Enter product name">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Category</label>
+                            <select class="form-select">
+                                <option>Electronics</option>
+                                <option>Clothing</option>
+                                <option>Food & Beverage</option>
+                                <option>Home & Garden</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Stock Quantity</label>
+                        <input type="number" class="form-control" placeholder="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sample Data
+        const products = [
+            { id: 1, name: "Wireless Headphones", price: 59.99, stock: 15, category: "electronics", icon: "🎧" },
+            { id: 2, name: "Coffee Mug", price: 12.99, stock: 8, category: "home", icon: "☕" },
+            { id: 3, name: "USB-C Cable", price: 9.99, stock: 5, category: "electronics", icon: "🔌" },
+            { id: 4, name: "T-Shirt", price: 24.99, stock: 20, category: "clothing", icon: "👕" },
+            { id: 5, name: "Sneakers", price: 89.99, stock: 3, category: "clothing", icon: "👟" },
+            { id: 6, name: "Energy Drink", price: 3.49, stock: 50, category: "food", icon: "🥤" },
+            { id: 7, name: "Bluetooth Speaker", price: 45.99, stock: 12, category: "electronics", icon: "🔊" },
+            { id: 8, name: "Yoga Mat", price: 29.99, stock: 7, category: "sports", icon: "🧘" },
+            { id: 9, name: "Water Bottle", price: 15.99, stock: 25, category: "sports", icon: "💧" },
+            { id: 10, name: "Notebook", price: 7.99, stock: 30, category: "home", icon: "📓" },
+            { id: 11, name: "Mouse Pad", price: 14.99, stock: 18, category: "electronics", icon: "🖱️" },
+            { id: 12, name: "Snack Bar", price: 2.49, stock: 100, category: "food", icon: "🍫" }
+        ];
+
+        let cart = [];
+        let currentUser = null;
+        let checkoutModal, productModal;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkoutModal = new bootstrap.Modal(document.getElementById('checkoutModal'));
+            productModal = new bootstrap.Modal(document.getElementById('productModal'));
+            renderProducts();
+            loadSampleData();
+        });
+
+        // Authentication
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+
+            if (email.includes('admin')) {
+                currentUser = { name: 'Admin User', role: 'admin', email: email };
+            } else {
+                currentUser = { name: 'John Cashier', role: 'cashier', email: email };
+            }
+
+            document.getElementById('loginView').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'block';
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userRole').textContent = currentUser.role === 'admin' ? 'Administrator' : 'Cashier';
+
+            // Role-based access
+            if (currentUser.role === 'cashier') {
+                document.getElementById('navProducts').style.display = 'none';
+                document.getElementById('navReports').style.display = 'none';
+                document.getElementById('navUsers').style.display = 'none';
+            }
+
+            showView('pos');
+        });
+
+        function logout() {
+            location.reload();
+        }
+
+        // Navigation
+        function showView(view) {
+            // Hide all views
+            document.querySelectorAll('.content-section').forEach(el => {
+                el.classList.remove('active');
+                el.style.display = 'none';
+            });
+
+            // Remove active class from nav
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+
+            // Show selected view
+            const viewMap = {
+                'pos': 'posView',
+                'products': 'productsView',
+                'sales': 'salesView',
+                'reports': 'reportsView',
+                'users': 'usersView'
+            };
+
+            const selectedEl = document.getElementById(viewMap[view]);
+            if (selectedEl) {
+                selectedEl.classList.add('active');
+                selectedEl.style.display = 'block';
+
+                // Update title
+                const titles = {
+                    'pos': 'POS Terminal',
+                    'products': 'Product Management',
+                    'sales': 'Sales History',
+                    'reports': 'Reports & Analytics',
+                    'users': 'User Management'
+                };
+                document.getElementById('pageTitle').textContent = titles[view];
+
+                // Update nav active state
+                const navMap = {
+                    'pos': 0, 'products': 1, 'sales': 2, 'reports': 3, 'users': 4
+                };
+                const navLinks = document.querySelectorAll('.nav-link');
+                if (navLinks[navMap[view]]) navLinks[navMap[view]].classList.add('active');
+            }
+
+            // Close sidebar on mobile
+            if (window.innerWidth < 992) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+
+        // Product Functions
+        function renderProducts(filter = 'all', search = '') {
+            const grid = document.getElementById('productGrid');
+            grid.innerHTML = '';
+
+            const filtered = products.filter(p => {
+                const matchesCategory = filter === 'all' || p.category === filter;
+                const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+                return matchesCategory && matchesSearch;
+            });
+
+            filtered.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.onclick = () => addToCart(product);
+                card.innerHTML = `
+                    <div class="product-image">${product.icon}</div>
+                    <div class="product-name">${product.name}</div>
+                    <div class="product-price">$${product.price.toFixed(2)}</div>
+                    <div class="product-stock ${product.stock < 5 ? 'text-danger fw-bold' : ''}">
+                        <i class="fas fa-box me-1"></i>${product.stock} in stock
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterCategory(category) {
+            document.querySelectorAll('.category-pill').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            const search = document.getElementById('productSearch').value;
+            renderProducts(category, search);
+        }
+
+        function filterProducts() {
+            const search = document.getElementById('productSearch').value;
+            const activeCategory = document.querySelector('.category-pill.active');
+            const category = activeCategory ? activeCategory.textContent.toLowerCase().replace(' all items', 'all') : 'all';
+            renderProducts(category === 'all items' ? 'all' : category, search);
+        }
+
+        // Cart Functions
+        function addToCart(product) {
+            if (product.stock <= 0) {
+                alert('Product out of stock!');
+                return;
+            }
+
+            const existing = cart.find(item => item.id === product.id);
+            if (existing) {
+                if (existing.quantity >= product.stock) {
+                    alert('Not enough stock!');
+                    return;
+                }
+                existing.quantity++;
+            } else {
+                cart.push({ ...product, quantity: 1 });
+            }
+            renderCart();
+        }
+
+        function updateQuantity(id, delta) {
+            const item = cart.find(item => item.id === id);
+            const product = products.find(p => p.id === id);
+
+            if (item) {
+                item.quantity += delta;
+                if (item.quantity <= 0) {
+                    cart = cart.filter(i => i.id !== id);
+                } else if (item.quantity > product.stock) {
+                    alert('Not enough stock!');
+                    item.quantity = product.stock;
+                }
+                renderCart();
+            }
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(item => item.id !== id);
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            const count = document.getElementById('cartItemCount');
+            const subtotalEl = document.getElementById('subtotal');
+            const taxEl = document.getElementById('tax');
+            const totalEl = document.getElementById('total');
+            const checkoutBtn = document.getElementById('checkoutBtn');
+
+            if (cart.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-cart-plus fa-3x mb-3 text-muted"></i>
+                        <p>Your cart is empty</p>
+                        <small>Click on products to add them</small>
+                    </div>
+                `;
+                count.textContent = '0 items';
+                checkoutBtn.disabled = true;
+            } else {
+                container.innerHTML = '';
+                let subtotal = 0;
+                let itemCount = 0;
+
+                cart.forEach(item => {
+                    subtotal += item.price * item.quantity;
+                    itemCount += item.quantity;
+
+                    const div = document.createElement('div');
+                    div.className = 'cart-item';
+                    div.innerHTML = `
+                        <div class="cart-item-info">
+                            <h6>${item.name}</h6>
+                            <div class="cart-item-price">$${item.price.toFixed(2)} each</div>
+                        </div>
+                        <div class="quantity-controls">
+                            <button class="qty-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
+                            <span class="fw-semibold">${item.quantity}</span>
+                            <button class="qty-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
+                            <button class="btn btn-sm btn-link text-danger ms-2" onclick="removeFromCart(${item.id})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+
+                count.textContent = `${itemCount} item${itemCount !== 1 ? 's' : ''}`;
+
+                const tax = subtotal * 0.1;
+                const total = subtotal + tax;
+
+                subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+                taxEl.textContent = `$${tax.toFixed(2)}`;
+                totalEl.textContent = `$${total.toFixed(2)}`;
+                checkoutBtn.disabled = false;
+            }
+        }
+
+        function clearCart() {
+            if (cart.length > 0 && confirm('Clear all items from cart?')) {
+                cart = [];
+                renderCart();
+            }
+        }
+
+        // Checkout
+        function openCheckout() {
+            const total = document.getElementById('total').textContent;
+            document.getElementById('checkoutTotal').textContent = total;
+            document.getElementById('amountReceived').value = '';
+            document.getElementById('changeDisplay').style.display = 'none';
+            checkoutModal.show();
+        }
+
+        function calculateChange() {
+            const total = parseFloat(document.getElementById('total').textContent.replace('$', ''));
+            const received = parseFloat(document.getElementById('amountReceived').value) || 0;
+            const change = received - total;
+
+            if (change >= 0) {
+                document.getElementById('changeAmount').textContent = `$${change.toFixed(2)}`;
+                document.getElementById('changeDisplay').style.display = 'block';
+                document.getElementById('changeDisplay').className = 'alert alert-success';
+            } else {
+                document.getElementById('changeAmount').textContent = `$${Math.abs(change).toFixed(2)}`;
+                document.getElementById('changeDisplay').style.display = 'block';
+                document.getElementById('changeDisplay').className = 'alert alert-warning';
+            }
+        }
+
+        function completeSale() {
+            // Update stock
+            cart.forEach(item => {
+                const product = products.find(p => p.id === item.id);
+                if (product) product.stock -= item.quantity;
+            });
+
+            // Add to sales history
+            const sale = {
+                invoice: 'INV-' + Date.now().toString().slice(-6),
+                date: new Date().toLocaleString(),
+                cashier: currentUser.name,
+                items: cart.reduce((sum, item) => sum + item.quantity, 0),
+                total: document.getElementById('total').textContent,
+                payment: document.querySelector('input[name="payment"]:checked').id
+            };
+
+            addSaleToHistory(sale);
+
+            // Reset
+            cart = [];
+            renderCart();
+            renderProducts();
+            checkoutModal.hide();
+
+            // Show success
+            alert(`Sale completed! Invoice: ${sale.invoice}`);
+        }
+
+        // Admin Functions
+        function loadSampleData() {
+            // Load products table
+            const tbody = document.getElementById('productsTable');
+            tbody.innerHTML = '';
+            products.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fs-4">${p.icon}</span>
+                            <div>
+                                <div class="fw-semibold">${p.name}</div>
+                                <small class="text-muted">ID: ${p.id}</small>
+                            </div>
+                        </div>
+                    </td>
+                    <td><span class="badge bg-light text-dark text-capitalize">${p.category}</span></td>
+                    <td class="fw-semibold">$${p.price.toFixed(2)}</td>
+                    <td class="${p.stock < 5 ? 'text-danger fw-bold' : ''}">${p.stock}</td>
+                    <td><span class="badge ${p.stock > 0 ? 'bg-success' : 'bg-danger'}">${p.stock > 0 ? 'Active' : 'Out of Stock'}</span></td>
+                    <td>
+                        <button class="action-btn primary me-1"><i class="fas fa-edit"></i></button>
+                        <button class="action-btn danger"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addSaleToHistory(sale) {
+            const tbody = document.getElementById('salesTable');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="fw-semibold text-primary">#${sale.invoice}</td>
+                <td>${sale.date}</td>
+                <td>${sale.cashier}</td>
+                <td>${sale.items}</td>
+                <td class="fw-bold">${sale.total}</td>
+                <td><span class="badge bg-info text-capitalize">${sale.payment}</span></td>
+                <td>
+                    <button class="action-btn primary"><i class="fas fa-print"></i></button>
+                </td>
+            `;
+            tbody.insertBefore(tr, tbody.firstChild);
+        }
+
+        function openProductModal() {
+            productModal.show();
+        }
+
+        function saveProduct() {
+            productModal.hide();
+            alert('Product saved successfully!');
+        }
+    </script>
+</body>
+</html>

@@ -15,9 +15,12 @@
             <div class="section-heading-copy">
                 <span class="sales-kicker">Checkout Complete</span>
                 <h2 class="section-title">Invoice @Model.InvoiceNo</h2>
-                <p class="section-description">The sale was saved successfully, sale items were recorded, and stock quantities were deducted in the same transaction.</p>
+                <p class="section-description">This completed sale is stored as a read-only transaction record with the invoice number, cashier, sale date, line items, and totals captured at checkout.</p>
             </div>
-            <a asp-controller="Sales" asp-action="Index" class="btn btn-primary">Start new sale</a>
+            <div class="page-actions">
+                <a asp-controller="Sales" asp-action="History" class="btn btn-outline-secondary">View sale history</a>
+                <a asp-controller="Sales" asp-action="Index" class="btn btn-primary">Start new sale</a>
+            </div>
         </div>
     </section>
 
@@ -51,7 +54,7 @@
                 {
                     <article class="invoice-item-card info-row">
                         <div>
-                            <span class="sales-card-category">Product</span>
+                            <span class="sales-card-category">@item.ItemLabel</span>
                             <h4>@item.ProductName</h4>
                             <p>Quantity @item.Quantity.ToString("N0")</p>
                         </div>
@@ -75,7 +78,7 @@
             <div class="section-heading">
                 <div class="section-heading-copy">
                     <h2 class="section-title">Sale Summary</h2>
-                    <p class="section-description">Invoice totals are derived from the recorded sale items.</p>
+                    <p class="section-description">Invoice totals are derived from the recorded sale items and remain read-only after checkout.</p>
                 </div>
                 <span class="section-meta-pill">Recorded sale</span>
             </div>

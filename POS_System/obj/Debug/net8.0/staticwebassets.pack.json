@@ -5,6 +5,10 @@
       "PackagePath": "staticwebassets\\POS_System.bundle.scp.css"
     },
     {
+      "Id": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\Design.html",
+      "PackagePath": "staticwebassets\\Design.html"
+    },
+    {
       "Id": "E:\\ASP.NetCore\\POS_System\\POS_System\\wwwroot\\css\\site.css",
       "PackagePath": "staticwebassets\\css\\site.css"
     },

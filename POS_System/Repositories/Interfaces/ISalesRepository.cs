@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore.Storage;
 using POS_System.Data.Entities;
+using POS_System.Models.Sales;
+using POS_System.ViewModels.Shared;
 
 namespace POS_System.Repositories.Interfaces;
 
@@ -25,5 +27,13 @@ public interface ISalesRepository
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
-    Task<TblSale?> GetSaleByIdAsync(long saleId, int userId, CancellationToken cancellationToken = default);
+    Task<PagedResult<SaleHistoryRecord>> GetSaleHistoryAsync(
+        int? userId,
+        string? searchTerm,
+        DateTime? startDateInclusive,
+        DateTime? endDateExclusive,
+        PaginationRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<TblSale?> GetSaleByIdAsync(long saleId, int? userId, CancellationToken cancellationToken = default);
 }
