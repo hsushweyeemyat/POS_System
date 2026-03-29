@@ -1,0 +1,8 @@
+@{
+    ViewData["Title"] = "Security Notes";
+}
+
+<h1 class="h3">@ViewData["Title"]</h1>
+
+<p>This internal POS system uses cookie-based sign-in and role claims sourced from <code>Tbl_Users</code>.</p>
+<p>Inactive users are rejected at sign-in, and existing cookies are revalidated against the database.</p>

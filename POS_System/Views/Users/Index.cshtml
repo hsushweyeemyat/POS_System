@@ -1,0 +1,128 @@
+@model UsersIndexViewModel
+@{
+    ViewData["Title"] = "User Management";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">User management</h1>
+        <p class="text-muted mb-0">Register Admin and Cashier accounts from this screen.</p>
+    </div>
+    <a asp-controller="Home" asp-action="Admin" class="btn btn-outline-secondary">Back to admin</a>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert alert-success" role="alert">@statusMessage</div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Register user</h2>
+
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="CreateUser.FullName" class="form-label"></label>
+                        <input asp-for="CreateUser.FullName" class="form-control" />
+                        <span asp-validation-for="CreateUser.FullName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CreateUser.Email" class="form-label"></label>
+                        <input asp-for="CreateUser.Email" class="form-control" autocomplete="username" />
+                        <span asp-validation-for="CreateUser.Email" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CreateUser.Password" class="form-label"></label>
+                        <input asp-for="CreateUser.Password" class="form-control" autocomplete="new-password" />
+                        <div class="form-text">Use at least 6 characters with at least one lowercase letter and one digit.</div>
+                        <span asp-validation-for="CreateUser.Password" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CreateUser.ConfirmPassword" class="form-label"></label>
+                        <input asp-for="CreateUser.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                        <span asp-validation-for="CreateUser.ConfirmPassword" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CreateUser.Role" class="form-label"></label>
+                        <select asp-for="CreateUser.Role" class="form-select">
+                            @foreach (var role in Model.AvailableRoles)
+                            {
+                                <option value="@role">@role</option>
+                            }
+                        </select>
+                        <span asp-validation-for="CreateUser.Role" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input asp-for="CreateUser.IsActive" class="form-check-input" />
+                        <label asp-for="CreateUser.IsActive" class="form-check-label"></label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Create user</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Current users</h2>
+
+                @if (Model.Users.Count == 0)
+                {
+                    <p class="text-muted mb-0">No users found.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in Model.Users)
+                                {
+                                    <tr>
+                                        <td>@user.FullName</td>
+                                        <td>@user.Email</td>
+                                        <td>@user.Role</td>
+                                        <td>
+                                            @if (user.IsActive)
+                                            {
+                                                <span class="badge text-bg-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge text-bg-secondary">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>@user.CreatedDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

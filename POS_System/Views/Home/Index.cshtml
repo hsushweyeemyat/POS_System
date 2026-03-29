@@ -1,0 +1,30 @@
+@{
+    ViewData["Title"] = "Dashboard";
+    var fullName = User.FindFirst("full_name")?.Value ?? User.Identity?.Name ?? "User";
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Unknown";
+}
+
+<div class="mb-4">
+    <h1 class="display-6">Welcome, @fullName</h1>
+    <p class="text-muted mb-0">You are signed in as <strong>@role</strong>.</p>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5">Authentication</h2>
+                <p class="mb-0">Cookie authentication and ASP.NET Core Identity are active against the existing <code>Tbl_Users</code> table.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm h-100">
+            <div class="card-body">
+                <h2 class="h5">Authorization</h2>
+                <p class="mb-0">Role-based access is ready for Admin-only pages and shared sales pages.</p>
+            </div>
+        </div>
+    </div>
+</div>

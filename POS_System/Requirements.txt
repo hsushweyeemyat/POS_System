@@ -1,0 +1,83 @@
+﻿POS (Point of Sale) Management System
+
+1. Project Overview
+A web-based POS system to manage product sales, stock, and daily transactions for a retail shop.
+
+Users & Roles:
+Admin:
+- Manage users, products, categories, prices, stock, and reports.
+Cashier:
+- Perform sales, generate invoices, and view daily sales.
+
+Tech Stack:
+- ASP.NET Core MVC
+- Entity Framework Core + SQL Server
+- ASP.NET Core Identity
+- Repository Pattern
+- Bootstrap
+
+2. Core Features
+Authentication & Authorization:
+- ASP.NET Core Identity
+- Role-based access (Admin, Cashier)
+
+Product Management:
+- CRUD products
+- Categories
+- Price and stock management
+
+POS Sales Screen:
+- Product search
+- Cart management
+- Checkout process
+
+Stock Management:
+- Auto stock deduction
+- Insufficient stock validation
+
+Sales & Invoice:
+- Invoice generation
+- Sale history
+
+Reports:
+- Daily sales report
+- Revenue summary
+
+3. Database Schema
+
+Users:
+- Id, FullName, Email, PasswordHash, Role
+
+Categories:
+- CategoryId, Name, IsActive
+
+Products:
+- ProductId, Name, Price, StockQty, CategoryId, IsActive
+
+Sales:
+- SaleId, InvoiceNo, SaleDate, TotalAmount, UserId
+
+SaleItems:
+- SaleItemId, SaleId, ProductId, Quantity, Price
+
+Simple Folder Structure 
+POSSystem
+ Controllers
+●	AccountController.cs
+●	 ProductController.cs
+●	 SaleController.cs
+Models
+●	Product.cs
+●	 Sale.cs
+●	SaleItem.cs
+Data
+●	 ApplicationDbContext.cs
+Repositories
+●	 IProductRepository.cs
+●	 ProductRepository.cs
+Views
+●	Sale
+●	Product
+ Program.cs
+
+When convenient, could you share the Git link for this project within 24 hours?

@@ -1,0 +1,15 @@
+@{
+    ViewData["Title"] = "Admin Area";
+}
+
+<div class="mb-4">
+    <h1 class="h3">Admin area</h1>
+    <p class="text-muted mb-0">This page is available only to users in the Admin role.</p>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <p class="mb-3">Use this area for user management, product maintenance, reports, and system configuration in the next implementation steps.</p>
+        <a asp-controller="Users" asp-action="Index" class="btn btn-primary">Manage users</a>
+    </div>
+</div>
